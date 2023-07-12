@@ -6,7 +6,6 @@ import com.project.japaneseBot.bot.repository.UserRepository;
 import com.project.japaneseBot.config.BotConfig;
 import com.project.japaneseBot.user.model.entity.UserEntity;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -39,12 +38,10 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
 
     @Override
     public void onUpdateReceived(@NotNull Update update) {
-        long chatId = 0;
-        long userId = 0; //это нам понадобится позже
-        String userName = null;
+        long chatId;
+        long userId;
+        String userName;
         String receivedMessage;
-
-        //если получено сообщение текстом
         if(update.hasMessage()) {
             chatId = update.getMessage().getChatId();
             userId = update.getMessage().getFrom().getId();
@@ -54,8 +51,6 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
                 receivedMessage = update.getMessage().getText();
                 botAnswerUtils(receivedMessage, chatId, userName, userId);
             }
-
-            //если нажата одна из кнопок бота
         } else if (update.hasCallbackQuery()) {
             chatId = update.getCallbackQuery().getMessage().getChatId();
             userId = update.getCallbackQuery().getFrom().getId();
@@ -69,7 +64,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     private void botAnswerUtils(String receivedMessage, long chatId, String userName, long userId) {
         switch (receivedMessage) {
             case "/start" -> startBot(chatId, userName);
-            case "/help" -> sendHelpText(chatId, HELP_TEXT);
+            case "/help" -> sendHelpText(chatId);
             case "/register" -> registerUser(chatId,userId);
             case "/profile" -> profile(chatId,userId);
             default -> {
@@ -91,10 +86,10 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         }
     }
 
-    private void sendHelpText(long chatId, String textToSend){
+    private void sendHelpText(long chatId){
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
-        message.setText(textToSend);
+        message.setText(BotCommands.HELP_TEXT);
 
         try {
             execute(message);
@@ -122,7 +117,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     }
 
     private void profile (long chatId, long userId) {
-        var user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException());
+        var user = userRepository.findById(userId).orElseThrow(RuntimeException::new);
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
         message.setText("Data of creation: " + user.getRegistrationDate().toString());
@@ -138,10 +133,5 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     @Override
     public String getBotUsername() {
         return config.name();
-    }
-
-    @Override
-    public String getBotToken() {
-        return config.token();
     }
 }

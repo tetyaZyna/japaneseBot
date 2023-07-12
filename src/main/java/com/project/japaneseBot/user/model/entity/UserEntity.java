@@ -1,12 +1,11 @@
 package com.project.japaneseBot.user.model.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
 import lombok.*;
 import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDate;
-
-import static jakarta.persistence.GenerationType.IDENTITY;
 @Builder
 @Getter
 @Setter

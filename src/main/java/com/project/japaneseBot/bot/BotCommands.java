@@ -12,8 +12,9 @@ public interface BotCommands {
             new BotCommand("/profile", "profile")
     );
 
-    String HELP_TEXT = "This bot will help to count the number of messages in the chat. " +
-            "The following commands are available to you:\n\n" +
-            "/start - start the bot\n" +
-            "/help - help menu";
+    String HELP_TEXT = """
+            This bot will help to count the number of messages in the chat. The following commands are available to you:
+
+            /start - start the bot
+            /help - help menu""";
 }
