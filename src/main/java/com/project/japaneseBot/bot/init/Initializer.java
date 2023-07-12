@@ -1,6 +1,6 @@
 package com.project.japaneseBot.bot.init;
 
-import com.project.japaneseBot.bot.controller.CounterTelegramBot;
+import com.project.japaneseBot.bot.controller.BotController;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -15,13 +15,13 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 @Component
 public class Initializer {
     @Autowired
-    CounterTelegramBot bot;
+    BotController bot;
 
     @EventListener({ContextRefreshedEvent.class})
     public void init() {
         try {
             TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
-            telegramBotsApi.registerBot((LongPollingBot) bot);
+            telegramBotsApi.registerBot(bot);
         } catch (TelegramApiException e) {
             log.error(e.getMessage());
         }

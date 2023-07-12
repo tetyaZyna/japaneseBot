@@ -2,11 +2,14 @@ package com.project.japaneseBot.bot.controller;
 
 import com.project.japaneseBot.bot.BotCommands;
 import com.project.japaneseBot.bot.Buttons;
+import com.project.japaneseBot.bot.repository.UserRepository;
 import com.project.japaneseBot.config.BotConfig;
-import jakarta.annotation.PostConstruct;
+import com.project.japaneseBot.user.model.entity.UserEntity;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -14,16 +17,18 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-@Slf4j
-@Configuration
-public class CounterTelegramBot extends TelegramLongPollingBot implements BotCommands {
-    BotConfig config;
+import java.time.LocalDate;
 
-    @PostConstruct
-    void logLoaded() {
-        log.info("props2 = {}", config);
-    }
-    public CounterTelegramBot(BotConfig config) {
+
+@Component
+@Slf4j
+public class BotController extends TelegramLongPollingBot implements BotCommands {
+    BotConfig config;
+    @Autowired
+    UserRepository userRepository;
+
+    public BotController(BotConfig config) {
+        super(config.token());
         this.config = config;
         try {
             this.execute(new SetMyCommands(LIST_OF_COMMANDS, new BotCommandScopeDefault(), null));
@@ -31,6 +36,7 @@ public class CounterTelegramBot extends TelegramLongPollingBot implements BotCom
             log.error(e.getMessage());
         }
     }
+
     @Override
     public void onUpdateReceived(@NotNull Update update) {
         long chatId = 0;
@@ -46,7 +52,7 @@ public class CounterTelegramBot extends TelegramLongPollingBot implements BotCom
 
             if (update.getMessage().hasText()) {
                 receivedMessage = update.getMessage().getText();
-                botAnswerUtils(receivedMessage, chatId, userName);
+                botAnswerUtils(receivedMessage, chatId, userName, userId);
             }
 
             //если нажата одна из кнопок бота
@@ -56,19 +62,18 @@ public class CounterTelegramBot extends TelegramLongPollingBot implements BotCom
             userName = update.getCallbackQuery().getFrom().getFirstName();
             receivedMessage = update.getCallbackQuery().getData();
 
-            botAnswerUtils(receivedMessage, chatId, userName);
+            botAnswerUtils(receivedMessage, chatId, userName, userId);
         }
     }
 
-    private void botAnswerUtils(String receivedMessage, long chatId, String userName) {
-        switch (receivedMessage){
-            case "/start":
-                startBot(chatId, userName);
-                break;
-            case "/help":
-                sendHelpText(chatId, HELP_TEXT);
-                break;
-            default: break;
+    private void botAnswerUtils(String receivedMessage, long chatId, String userName, long userId) {
+        switch (receivedMessage) {
+            case "/start" -> startBot(chatId, userName);
+            case "/help" -> sendHelpText(chatId, HELP_TEXT);
+            case "/register" -> registerUser(chatId,userId);
+            case "/profile" -> profile(chatId,userId);
+            default -> {
+            }
         }
     }
 
@@ -90,6 +95,37 @@ public class CounterTelegramBot extends TelegramLongPollingBot implements BotCom
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
         message.setText(textToSend);
+
+        try {
+            execute(message);
+            log.info("Reply sent");
+        } catch (TelegramApiException e){
+            log.error(e.getMessage());
+        }
+    }
+
+    private void registerUser (long chatId, long userId) {
+        userRepository.save(UserEntity.builder()
+                .userId(userId)
+                .registrationDate(LocalDate.now())
+                .build());
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText("Created Account");
+
+        try {
+            execute(message);
+            log.info("Reply sent");
+        } catch (TelegramApiException e){
+            log.error(e.getMessage());
+        }
+    }
+
+    private void profile (long chatId, long userId) {
+        var user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException());
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText("Data of creation: " + user.getRegistrationDate().toString());
 
         try {
             execute(message);
