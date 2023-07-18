@@ -1,4 +1,4 @@
-package com.project.japaneseBot.user.model.entity;
+package com.project.japaneseBot.user.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

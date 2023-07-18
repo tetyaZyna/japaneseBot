@@ -2,12 +2,11 @@ package com.project.japaneseBot.bot.controller;
 
 import com.project.japaneseBot.bot.BotCommands;
 import com.project.japaneseBot.bot.Buttons;
-import com.project.japaneseBot.bot.repository.UserRepository;
+import com.project.japaneseBot.user.repository.UserRepository;
 import com.project.japaneseBot.config.BotConfig;
-import com.project.japaneseBot.user.model.entity.UserEntity;
+import com.project.japaneseBot.user.entity.UserEntity;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
@@ -23,12 +22,12 @@ import java.time.LocalDate;
 @Slf4j
 public class BotController extends TelegramLongPollingBot implements BotCommands {
     BotConfig config;
-    @Autowired
     UserRepository userRepository;
 
-    public BotController(BotConfig config) {
+    public BotController(BotConfig config, UserRepository userRepository) {
         super(config.token());
         this.config = config;
+        this.userRepository = userRepository;
         try {
             this.execute(new SetMyCommands(LIST_OF_COMMANDS, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e){
