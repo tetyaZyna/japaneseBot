@@ -9,7 +9,9 @@ public interface BotCommands {
             new BotCommand("/start", "start bot"),
             new BotCommand("/help", "bot info"),
             new BotCommand("/register", "register"),
-            new BotCommand("/profile", "profile")
+            new BotCommand("/profile", "profile"),
+            new BotCommand("/katakana", "katakana"),
+            new BotCommand("/hiragana", "hiragana")
     );
 
     String HELP_TEXT = """

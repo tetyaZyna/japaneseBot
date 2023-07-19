@@ -1,5 +1,7 @@
 package com.project.japaneseBot.bot.controller;
 
+import com.project.japaneseBot.alphabet.repository.ReadOnlyHiraganaRepository;
+import com.project.japaneseBot.alphabet.repository.ReadOnlyKatakanaRepository;
 import com.project.japaneseBot.bot.BotCommands;
 import com.project.japaneseBot.bot.Buttons;
 import com.project.japaneseBot.user.repository.UserRepository;
@@ -23,11 +25,18 @@ import java.time.LocalDate;
 public class BotController extends TelegramLongPollingBot implements BotCommands {
     BotConfig config;
     UserRepository userRepository;
+    Buttons buttons;
+    ReadOnlyKatakanaRepository katakanaRepository;
+    ReadOnlyHiraganaRepository hiraganaRepository;
 
-    public BotController(BotConfig config, UserRepository userRepository) {
+    public BotController(BotConfig config, UserRepository userRepository, Buttons buttons,
+                         ReadOnlyKatakanaRepository katakanaRepository, ReadOnlyHiraganaRepository hiraganaRepository) {
         super(config.token());
         this.config = config;
         this.userRepository = userRepository;
+        this.buttons = buttons;
+        this.katakanaRepository = katakanaRepository;
+        this.hiraganaRepository = hiraganaRepository;
         try {
             this.execute(new SetMyCommands(LIST_OF_COMMANDS, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e){
@@ -60,14 +69,64 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         }
     }
 
-    private void botAnswerUtils(String receivedMessage, long chatId, String userName, long userId) {
+/*    private void botAnswerUtils(String receivedMessage, long chatId, String userName, long userId) {
+    if (receivedMessage.startsWith("/katakana ")) {
+        String katakanaValue = receivedMessage.substring("/katakana ".length());
+        handleKatakanaValue(chatId, katakanaValue);
+    } else {
         switch (receivedMessage) {
             case "/start" -> startBot(chatId, userName);
             case "/help" -> sendHelpText(chatId);
-            case "/register" -> registerUser(chatId,userId);
-            case "/profile" -> profile(chatId,userId);
+            case "/register" -> registerUser(chatId, userId);
+            case "/profile" -> profile(chatId, userId);
+            case "/katakana" -> katakana(chatId);
             default -> {
             }
+        }
+    }
+}*/
+
+    private void botAnswerUtils(String receivedMessage, long chatId, String userName, long userId) {
+        if (receivedMessage.startsWith("/")) {
+            switch (receivedMessage) {
+                case "/start" -> startBot(chatId, userName);
+                case "/help" -> sendHelpText(chatId);
+                case "/register" -> registerUser(chatId, userId);
+                case "/profile" -> profile(chatId, userId);
+                case "/hiragana" -> switchHiragana(chatId);
+                case "/katakana" -> switchKatakana(chatId);
+                default -> defaultAnswer(chatId);
+            }
+        } else {
+
+        }
+    }
+
+    private void handleMessage(long chatId, String message) {
+        message = message.trim();
+        if (message.length() == 1) {
+            if (katakanaRepository.existsByHieroglyph(message)) {
+                handleKatakanaValue(chatId, message);
+            } else if (hiraganaRepository.existsByHieroglyph(message)) {
+                handleHiraganaValue(chatId, message);
+            }
+
+        }
+        for (int i = 0; i < message.length(); i++) {
+            char letter = message.charAt(i);
+
+        }
+    }
+
+    private void defaultAnswer(long chatId) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText("Unknown command");
+        try {
+            execute(message);
+            log.info("Reply sent");
+        } catch (TelegramApiException e){
+            log.error(e.getMessage());
         }
     }
 
@@ -75,7 +134,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
         message.setText("Hi, " + userName + "! I'm a Telegram bot.'");
-        message.setReplyMarkup(Buttons.inlineMarkup());
+        message.setReplyMarkup(buttons.inlineMarkup());
 
         try {
             execute(message);
@@ -121,6 +180,64 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         message.setChatId(chatId);
         message.setText("Data of creation: " + user.getRegistrationDate().toString());
 
+        try {
+            execute(message);
+            log.info("Reply sent");
+        } catch (TelegramApiException e){
+            log.error(e.getMessage());
+        }
+    }
+
+    private void switchKatakana(long chatId) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText("Keyboard switched to Katakana");
+        message.setReplyMarkup(buttons.getKatakanaReplyKeyboard());
+
+        try {
+            execute(message);
+            log.info("Reply sent");
+        } catch (TelegramApiException e){
+            log.error(e.getMessage());
+        }
+    }
+
+    private void switchHiragana(long chatId) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText("Keyboard switched to Hiragana");
+        message.setReplyMarkup(buttons.getHiraganaReplyKeyboard());
+
+        try {
+            execute(message);
+            log.info("Reply sent");
+        } catch (TelegramApiException e){
+            log.error(e.getMessage());
+        }
+    }
+
+    private String[] handleKatakanaValue(String katakanaValue) {
+        String hieroglyphPronouns = katakanaRepository.findByHieroglyph(katakanaValue)
+                .orElseThrow(RuntimeException::new).getHieroglyphPronouns();
+        return new String[]{katakanaValue, hieroglyphPronouns};
+
+/*        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText(katakanaValue + " - " + hieroglyphPronouns);
+        try {
+            execute(message);
+            log.info("Reply sent");
+        } catch (TelegramApiException e){
+            log.error(e.getMessage());
+        }*/
+    }
+
+    private void handleHiraganaValue(long chatId, String hiraganaValue) {
+        String hieroglyphPronouns = hiraganaRepository.findByHieroglyph(hiraganaValue)
+                .orElseThrow(RuntimeException::new).getHieroglyphPronouns();
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText(hiraganaValue + " - " + hieroglyphPronouns);
         try {
             execute(message);
             log.info("Reply sent");
