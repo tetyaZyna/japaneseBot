@@ -17,4 +17,5 @@ public class UserEntity {
     @Id
     private long userId;
     private LocalDate registrationDate;
+    private String mode;
 }

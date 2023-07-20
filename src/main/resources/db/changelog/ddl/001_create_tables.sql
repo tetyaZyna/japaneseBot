@@ -23,3 +23,6 @@ CREATE TABLE katakana_entity
     hieroglyph_pronouns VARCHAR(255),
     CONSTRAINT pk_katakanaentity PRIMARY KEY (hieroglyph_id)
 );
+
+--changeset sasha:3
+ALTER TABLE user_entity ADD COLUMN IF NOT EXISTS mode VARCHAR(255) DEFAULT 'TEXT_MODE' NULL;

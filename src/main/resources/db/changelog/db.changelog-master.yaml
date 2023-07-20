@@ -14,3 +14,6 @@ databaseChangeLog:
   - include:
       file: dml/002_insert_hiragana.sql
       relativeToChangelogFile: true
+  - changeSet:
+      id: 3
+      author: sasha

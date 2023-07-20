@@ -47,7 +47,9 @@ public class Keyboards {
                 keyboardRows = new KeyboardRow();
             }
             if (katakanaRepository.existsById(i)) {
-                katakana = katakanaRepository.findByHieroglyphId(i).getHieroglyph();
+                katakana = katakanaRepository.findByHieroglyphId(i)
+                        .orElseThrow(RuntimeException::new)
+                        .getHieroglyph();
                 KeyboardButton button = new KeyboardButton(katakana);
                 keyboardRows.add(button);
             }
@@ -72,7 +74,9 @@ public class Keyboards {
                 keyboardRows = new KeyboardRow();
             }
             if (hiraganaRepository.existsById(i)) {
-                hiragana = hiraganaRepository.findByHieroglyphId(i).getHieroglyph();
+                hiragana = hiraganaRepository.findByHieroglyphId(i)
+                        .orElseThrow(RuntimeException::new)
+                        .getHieroglyph();
                 KeyboardButton button = new KeyboardButton(hiragana);
                 keyboardRows.add(button);
             }
