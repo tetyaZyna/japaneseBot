@@ -9,7 +9,7 @@ import com.project.japaneseBot.bot.model.UserMode;
 import com.project.japaneseBot.bot.service.BotService;
 import com.project.japaneseBot.bot.service.HandlerService;
 import com.project.japaneseBot.config.BotConfig;
-import com.project.japaneseBot.dto.SimpleTask;
+import com.project.japaneseBot.task.entity.TaskEntity;
 import com.project.japaneseBot.user.entity.UserEntity;
 import com.project.japaneseBot.user.repository.UserRepository;
 import jakarta.validation.constraints.NotNull;
@@ -23,9 +23,7 @@ import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScope
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.LocalDate;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 
 @Component
@@ -108,7 +106,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
                     case "/profile" -> profile(chatId, userId);
                     case "/hiragana" -> switchHiragana(chatId);
                     case "/katakana" -> switchKatakana(chatId);
-                    case "/task" -> startTask(chatId);
+                    case "/task" -> startTask(chatId, userId);
                     default -> defaultAnswer(chatId);
                 }
             } else {
@@ -127,42 +125,52 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         }
     }
 
-    private void startTask(long chatId) {
+    private void startTask(long chatId, long userId) {
+        UserEntity user = userRepository.findByUserId(userId);
         int questionCount = 10;
-        var letterList = generateLetter(questionCount);
-        var pronounsList = findPronouns(letterList);
-        SimpleTask task = SimpleTask.builder()
+        var letterMap = generateLetterMap(questionCount);
+        TaskEntity task = TaskEntity.builder()
                 .questionNumber(1)
                 .questionCount(questionCount)
-                .letter(letterList)
-                .pronouns(pronounsList)
-                .isAnswerCorrect(new boolean[questionCount])
+                .letterAndPronounseMap(letterMap)
+                .isAnswerCorrect(new LinkedList<>())
+                .userEntity(user)
                 .build();
-        //TODO create DB table for tasks
-    }
+        List<TaskEntity> userTaskList = user.getTasks();
+        userTaskList.add(task);
+        user.setTasks(userTaskList);
+        userRepository.save(user);
 
-    private List<String> findPronouns(List<String> letterList) {
-        List<String> pronouns = new LinkedList<>();
-        for (String s : letterList) {
-            pronouns.add(katakanaRepository.findByHieroglyph(s)
-                    .orElseThrow(RuntimeException::new)
-                    .getHieroglyphPronouns());
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText("Callback");
+        try {
+            execute(message);
+            log.info("Reply sent");
+        } catch (TelegramApiException e){
+            log.error(e.getMessage());
         }
-        return pronouns;
     }
 
-    private List<String> generateLetter (int count) {
-        List<String> letter = new LinkedList<>();
+    private Map<String, String> generateLetterMap(int count) {
+        Map<String, String> letterMap = new LinkedHashMap<>();
         long repositoryLength = katakanaRepository.count();
+        List<Long> idList = new ArrayList<>();
+        for (long j = 0; j < repositoryLength; j++) {
+            idList.add(j + 1);
+        }
         Random random = new Random();
         for (int i = 0; i < count; i++) {
-            letter.add(
-                    katakanaRepository.findByHieroglyphId(random.nextLong(repositoryLength + 1))
+               String letterKey = katakanaRepository.findByHieroglyphId(idList
+                               .remove(random.nextInt(idList.size())))
                             .orElseThrow(RuntimeException::new)
-                            .getHieroglyph()
-            );
+                            .getHieroglyph();
+               String letterValue = katakanaRepository.findByHieroglyph(letterKey)
+                       .orElseThrow(RuntimeException::new)
+                       .getHieroglyphPronouns();
+               letterMap.put(letterKey, letterValue);
         }
-        return letter;
+        return letterMap;
     }
 
 
