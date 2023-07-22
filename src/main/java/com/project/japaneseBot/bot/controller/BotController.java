@@ -2,14 +2,15 @@ package com.project.japaneseBot.bot.controller;
 
 import com.project.japaneseBot.alphabet.repository.ReadOnlyHiraganaRepository;
 import com.project.japaneseBot.alphabet.repository.ReadOnlyKatakanaRepository;
+import com.project.japaneseBot.bot.BotCommands;
 import com.project.japaneseBot.bot.buttons.Buttons;
 import com.project.japaneseBot.bot.buttons.Keyboards;
-import com.project.japaneseBot.bot.BotCommands;
 import com.project.japaneseBot.bot.model.UserMode;
 import com.project.japaneseBot.bot.service.BotService;
 import com.project.japaneseBot.bot.service.HandlerService;
 import com.project.japaneseBot.config.BotConfig;
 import com.project.japaneseBot.task.entity.TaskEntity;
+import com.project.japaneseBot.task.entity.TaskLettersEntity;
 import com.project.japaneseBot.task.repository.TaskRepository;
 import com.project.japaneseBot.user.entity.UserEntity;
 import com.project.japaneseBot.user.repository.UserRepository;
@@ -109,7 +110,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
                     case "/profile" -> profile(chatId, userId);
                     case "/hiragana" -> switchHiragana(chatId);
                     case "/katakana" -> switchKatakana(chatId);
-                    //case "/task" -> startTask(chatId, userId);
+                    case "/task" -> startTask(chatId, userId);
                     default -> defaultAnswer(chatId);
                 }
             } else {
@@ -120,48 +121,101 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
                 switch (receivedMessage) {
                     case "/hiragana" -> switchHiragana(chatId);
                     case "/katakana" -> switchKatakana(chatId);
+                    case "/close" -> closeTask(chatId, userId);
                     default -> defaultAnswer(chatId);
                 }
             } else {
-                returnPronouns(chatId, receivedMessage);
+                checkAnswer(chatId, userId, receivedMessage);
             }
         }
     }
 
-/*    private void startTask(long chatId, long userId) {
-        UserEntity user = userRepository.findByUserId(userId);
-        int questionCount = 10;
-        var letterMap = generateLetterMap(questionCount);
-        TaskEntity task = TaskEntity.builder()
-                .questionNumber(1)
-                .questionCount(questionCount)
-                .letterAndPronounseMap(letterMap)
-                .isAnswerCorrect(new LinkedList<>())
-                .userEntity(user)
-                .build();
-        List<TaskEntity> userTaskList = user.getTasks();
-        userTaskList.add(task);
-        user.setTasks(userTaskList);
-        user.setMode(UserMode.TASK_MODE.name());
-        userRepository.save(user);
-        var task1 = taskRepository.findFirstByUserEntity_UserIdOrderByTaskIdDesc(userId)
+    private void checkAnswer(long chatId, long userId, String receivedMessage) {
+        var task = taskRepository.findFirstByUserEntity_UserIdOrderByTaskIdDesc(userId)
                 .orElseThrow(RuntimeException::new);
-        var letter = task1.getLetterAndPronounseMap();
-        String taskText = "Letter - " + ;
+        String returnText = "Ja ne ebu sho sluchilos";
+        if (task.getQuestionNumber() <= task.getQuestionCount()) {
+            String letter = task.getLetters().get(task.getQuestionNumber() - 1).getLetterKey();
+            String pronouns = katakanaRepository.findByHieroglyph(letter).orElseThrow(RuntimeException::new)
+                    .getHieroglyphPronouns();
+            boolean isCorrect;
+            if (receivedMessage.equals(pronouns)) {
+                returnText = "Correct";
+                isCorrect = true;
+            } else {
+                isCorrect = false;
+                returnText = "Wrong";
+            }
+            List<Boolean> answers = task.getIsAnswerCorrect();
+            answers.add(isCorrect);
+            int currentNumber = task.getQuestionNumber();
+            task.setQuestionNumber(currentNumber + 1);
+            taskRepository.save(task);
+            if (task.getQuestionNumber() < task.getQuestionCount()) {
+                letter = task.getLetters().get(task.getQuestionNumber() - 1).getLetterKey();
+                returnText = returnText + "\n\nLetter - " + letter + "\nPronouns?";
+            } else {
+                returnText = returnText + "\n\nYour answers: " + task.getIsAnswerCorrect().toString();
+                UserEntity user = userRepository.findByUserId(userId);
+                user.setMode(UserMode.TEXT_MODE.name());
+                userRepository.save(user);
+            }
+        }
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
-        message.setText("Callback");
+        message.setText(returnText);
         try {
             execute(message);
             log.info("Reply sent");
         } catch (TelegramApiException e){
             log.error(e.getMessage());
         }
-    }*/
-//TODO change Map<String, String> in TaskEntity to TaskLetters.Class
+    }
 
-    private Map<String, String> generateLetterMap(int count) {
-        Map<String, String> letterMap = new LinkedHashMap<>();
+    private void closeTask(long chatId, long userId) {
+        UserEntity user = userRepository.findByUserId(userId);
+        user.setMode(UserMode.TEXT_MODE.name());
+        userRepository.save(user);
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText("Task closed");
+        try {
+            execute(message);
+            log.info("Reply sent");
+        } catch (TelegramApiException e){
+            log.error(e.getMessage());
+        }
+    }
+
+    private void startTask(long chatId, long userId) {
+        UserEntity user = userRepository.findByUserId(userId);
+        int questionCount = 10;
+        TaskEntity task = TaskEntity.builder()
+                .questionNumber(1)
+                .questionCount(questionCount)
+                .isAnswerCorrect(new LinkedList<>())
+                .userEntity(user)
+                .build();
+        taskRepository.save(task);
+        task.setLetters(generateLetters(questionCount, task));
+        taskRepository.save(task);
+        user.setMode(UserMode.TASK_MODE.name());
+        userRepository.save(user);
+        var letter = task.getLetters().get(task.getQuestionNumber() - 1).getLetterKey();
+        String taskText = "Letter - " + letter + "\nPronouns?";
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText(taskText);
+        try {
+            execute(message);
+            log.info("Reply sent");
+        } catch (TelegramApiException e){
+            log.error(e.getMessage());
+        }
+    }
+
+    private List<TaskLettersEntity> generateLetters(int count, TaskEntity task) {
+        List<TaskLettersEntity> taskLettersEntities = new ArrayList<>();
         long repositoryLength = katakanaRepository.count();
         List<Long> idList = new ArrayList<>();
         for (long j = 0; j < repositoryLength; j++) {
@@ -176,9 +230,13 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
                String letterValue = katakanaRepository.findByHieroglyph(letterKey)
                        .orElseThrow(RuntimeException::new)
                        .getHieroglyphPronouns();
-               letterMap.put(letterKey, letterValue);
+               taskLettersEntities.add(TaskLettersEntity.builder()
+                       .letterKey(letterKey)
+                       .letterValue(letterValue)
+                       .taskEntity(task)
+                       .build());
         }
-        return letterMap;
+        return taskLettersEntities;
     }
 
 

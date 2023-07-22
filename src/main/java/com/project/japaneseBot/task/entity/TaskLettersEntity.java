@@ -1,4 +1,4 @@
-/*package com.project.japaneseBot.task.entity;
+package com.project.japaneseBot.task.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -24,4 +24,4 @@ public class TaskLettersEntity {
     private String letterKey;
 
     private String letterValue;
-}*/
+}

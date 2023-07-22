@@ -25,13 +25,10 @@ public class TaskEntity {
 
     private Integer questionCount;
 
-    @ElementCollection
-    @CollectionTable(name = "task_letters", joinColumns = @JoinColumn(name = "task_id"))
-    @MapKeyColumn(name = "letter_key")
-    @Column(name = "letter_value")
-    private Map<String, String> letterAndPronounseMap;
+    @OneToMany(mappedBy = "taskEntity", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<TaskLettersEntity> letters;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_answers", joinColumns = @JoinColumn(name = "task_id"))
     @Column(name = "is_answer_correct")
     private List<Boolean> isAnswerCorrect;
