@@ -1,4 +1,4 @@
-package com.project.japaneseBot.bot.init;
+package com.project.japaneseBot.bot;
 
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 

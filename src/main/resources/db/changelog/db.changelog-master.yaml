@@ -1,19 +1,12 @@
 databaseChangeLog:
-  - changeSet:
-      id: 1
-      author: sasha
   - include:
       file: ddl/001_create_tables.sql
       relativeToChangelogFile: true
-  - changeSet:
-      id: 2
-      author: sasha
+
   - include:
       file: dml/001_insert_katakana.sql
       relativeToChangelogFile: true
+
   - include:
       file: dml/002_insert_hiragana.sql
       relativeToChangelogFile: true
-  - changeSet:
-      id: 3
-      author: sasha

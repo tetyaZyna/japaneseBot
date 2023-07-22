@@ -15,21 +15,27 @@ import java.util.Map;
 @NoArgsConstructor
 @Entity
 @Validated
+@Table(name = "task")
 public class TaskEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long taskId;
-    private int questionNumber;
-    private int questionCount;
+    private Long taskId;
+
+    private Integer questionNumber;
+
+    private Integer questionCount;
+
     @ElementCollection
     @CollectionTable(name = "task_letters", joinColumns = @JoinColumn(name = "task_id"))
     @MapKeyColumn(name = "letter_key")
     @Column(name = "letter_value")
     private Map<String, String> letterAndPronounseMap;
+
     @ElementCollection
     @CollectionTable(name = "user_answers", joinColumns = @JoinColumn(name = "task_id"))
     @Column(name = "is_answer_correct")
     private List<Boolean> isAnswerCorrect;
+
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity userEntity;

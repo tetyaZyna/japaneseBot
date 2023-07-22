@@ -4,12 +4,13 @@ import com.project.japaneseBot.alphabet.repository.ReadOnlyHiraganaRepository;
 import com.project.japaneseBot.alphabet.repository.ReadOnlyKatakanaRepository;
 import com.project.japaneseBot.bot.buttons.Buttons;
 import com.project.japaneseBot.bot.buttons.Keyboards;
-import com.project.japaneseBot.bot.init.BotCommands;
+import com.project.japaneseBot.bot.BotCommands;
 import com.project.japaneseBot.bot.model.UserMode;
 import com.project.japaneseBot.bot.service.BotService;
 import com.project.japaneseBot.bot.service.HandlerService;
 import com.project.japaneseBot.config.BotConfig;
 import com.project.japaneseBot.task.entity.TaskEntity;
+import com.project.japaneseBot.task.repository.TaskRepository;
 import com.project.japaneseBot.user.entity.UserEntity;
 import com.project.japaneseBot.user.repository.UserRepository;
 import jakarta.validation.constraints.NotNull;
@@ -35,12 +36,13 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     UserRepository userRepository;
     ReadOnlyKatakanaRepository katakanaRepository;
     ReadOnlyHiraganaRepository hiraganaRepository;
+    TaskRepository taskRepository;
     HandlerService handlerService;
     BotService botService;
 
     public BotController(BotConfig config, UserRepository userRepository, Buttons buttons, Keyboards keyboards,
                          ReadOnlyKatakanaRepository katakanaRepository, ReadOnlyHiraganaRepository hiraganaRepository,
-                         HandlerService handlerService, BotService botService) {
+                         TaskRepository taskRepository, HandlerService handlerService, BotService botService) {
         super(config.token());
         this.config = config;
         this.buttons = buttons;
@@ -48,6 +50,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         this.userRepository = userRepository;
         this.katakanaRepository = katakanaRepository;
         this.hiraganaRepository = hiraganaRepository;
+        this.taskRepository = taskRepository;
         this.handlerService = handlerService;
         this.botService = botService;
         try {
@@ -106,7 +109,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
                     case "/profile" -> profile(chatId, userId);
                     case "/hiragana" -> switchHiragana(chatId);
                     case "/katakana" -> switchKatakana(chatId);
-                    case "/task" -> startTask(chatId, userId);
+                    //case "/task" -> startTask(chatId, userId);
                     default -> defaultAnswer(chatId);
                 }
             } else {
@@ -125,7 +128,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         }
     }
 
-    private void startTask(long chatId, long userId) {
+/*    private void startTask(long chatId, long userId) {
         UserEntity user = userRepository.findByUserId(userId);
         int questionCount = 10;
         var letterMap = generateLetterMap(questionCount);
@@ -139,8 +142,12 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         List<TaskEntity> userTaskList = user.getTasks();
         userTaskList.add(task);
         user.setTasks(userTaskList);
+        user.setMode(UserMode.TASK_MODE.name());
         userRepository.save(user);
-
+        var task1 = taskRepository.findFirstByUserEntity_UserIdOrderByTaskIdDesc(userId)
+                .orElseThrow(RuntimeException::new);
+        var letter = task1.getLetterAndPronounseMap();
+        String taskText = "Letter - " + ;
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
         message.setText("Callback");
@@ -150,7 +157,8 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         } catch (TelegramApiException e){
             log.error(e.getMessage());
         }
-    }
+    }*/
+//TODO change Map<String, String> in TaskEntity to TaskLetters.Class
 
     private Map<String, String> generateLetterMap(int count) {
         Map<String, String> letterMap = new LinkedHashMap<>();

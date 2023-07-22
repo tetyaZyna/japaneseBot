@@ -1,6 +1,6 @@
 -- liquibase formatted sql
 -- changeset sasha:4
-INSERT INTO hiragana_entity (hieroglyph, hieroglyph_pronouns)
+INSERT INTO hiragana (hieroglyph, hieroglyph_pronouns)
 VALUES
     ('あ', 'a'),
     ('い', 'i'),
