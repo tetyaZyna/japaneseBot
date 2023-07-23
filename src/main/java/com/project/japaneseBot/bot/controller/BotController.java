@@ -151,7 +151,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
             int currentNumber = task.getQuestionNumber();
             task.setQuestionNumber(currentNumber + 1);
             taskRepository.save(task);
-            if (task.getQuestionNumber() < task.getQuestionCount()) {
+            if (task.getQuestionNumber() <= task.getQuestionCount()) {
                 letter = task.getLetters().get(task.getQuestionNumber() - 1).getLetterKey();
                 returnText = returnText + "\n\nLetter - " + letter + "\nPronouns?";
             } else {
