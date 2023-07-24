@@ -6,7 +6,6 @@ import lombok.*;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
-import java.util.Map;
 
 @Builder
 @Getter
@@ -36,4 +35,8 @@ public class TaskEntity {
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity userEntity;
+
+    @ManyToOne
+    @JoinColumn(name = "settings_id", nullable = false)
+    private TaskSettingsEntity taskSettingsEntity;
 }
