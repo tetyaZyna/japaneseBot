@@ -8,9 +8,8 @@ import com.project.japaneseBot.bot.buttons.Keyboards;
 import com.project.japaneseBot.bot.model.UserMode;
 import com.project.japaneseBot.bot.service.BotService;
 import com.project.japaneseBot.bot.service.HandlerService;
+import com.project.japaneseBot.bot.service.TaskService;
 import com.project.japaneseBot.config.BotConfig;
-import com.project.japaneseBot.task.entity.TaskEntity;
-import com.project.japaneseBot.task.entity.TaskLettersEntity;
 import com.project.japaneseBot.task.repository.TaskRepository;
 import com.project.japaneseBot.user.entity.UserEntity;
 import com.project.japaneseBot.user.repository.UserRepository;
@@ -25,7 +24,6 @@ import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScope
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.LocalDate;
-import java.util.*;
 
 
 @Component
@@ -40,10 +38,13 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     TaskRepository taskRepository;
     HandlerService handlerService;
     BotService botService;
+    final
+    TaskService taskService;
 
     public BotController(BotConfig config, UserRepository userRepository, Buttons buttons, Keyboards keyboards,
                          ReadOnlyKatakanaRepository katakanaRepository, ReadOnlyHiraganaRepository hiraganaRepository,
-                         TaskRepository taskRepository, HandlerService handlerService, BotService botService) {
+                         TaskRepository taskRepository, HandlerService handlerService, BotService botService,
+                         TaskService taskService) {
         super(config.token());
         this.config = config;
         this.buttons = buttons;
@@ -54,6 +55,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         this.taskRepository = taskRepository;
         this.handlerService = handlerService;
         this.botService = botService;
+        this.taskService = taskService;
         try {
             this.execute(new SetMyCommands(LIST_OF_COMMANDS, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e){
@@ -131,39 +133,9 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     }
 
     private void checkAnswer(long chatId, long userId, String receivedMessage) {
-        var task = taskRepository.findFirstByUserEntity_UserIdOrderByTaskIdDesc(userId)
-                .orElseThrow(RuntimeException::new);
-        String returnText = "Ja ne ebu sho sluchilos";
-        if (task.getQuestionNumber() <= task.getQuestionCount()) {
-            String letter = task.getLetters().get(task.getQuestionNumber() - 1).getLetterKey();
-            String pronouns = katakanaRepository.findByHieroglyph(letter).orElseThrow(RuntimeException::new)
-                    .getHieroglyphPronouns();
-            boolean isCorrect;
-            if (receivedMessage.equals(pronouns)) {
-                returnText = "Correct";
-                isCorrect = true;
-            } else {
-                isCorrect = false;
-                returnText = "Wrong";
-            }
-            List<Boolean> answers = task.getIsAnswerCorrect();
-            answers.add(isCorrect);
-            int currentNumber = task.getQuestionNumber();
-            task.setQuestionNumber(currentNumber + 1);
-            taskRepository.save(task);
-            if (task.getQuestionNumber() <= task.getQuestionCount()) {
-                letter = task.getLetters().get(task.getQuestionNumber() - 1).getLetterKey();
-                returnText = returnText + "\n\nLetter - " + letter + "\nPronouns?";
-            } else {
-                returnText = returnText + "\n\nYour answers: " + task.getIsAnswerCorrect().toString();
-                UserEntity user = userRepository.findByUserId(userId);
-                user.setMode(UserMode.TEXT_MODE.name());
-                userRepository.save(user);
-            }
-        }
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
-        message.setText(returnText);
+        message.setText(taskService.checkAnswer(userId, receivedMessage));
         try {
             execute(message);
             log.info("Reply sent");
@@ -173,9 +145,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     }
 
     private void closeTask(long chatId, long userId) {
-        UserEntity user = userRepository.findByUserId(userId);
-        user.setMode(UserMode.TEXT_MODE.name());
-        userRepository.save(user);
+        taskService.closeTask(userId);
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
         message.setText("Task closed");
@@ -188,24 +158,9 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     }
 
     private void startTask(long chatId, long userId) {
-        UserEntity user = userRepository.findByUserId(userId);
-        int questionCount = 10;
-        TaskEntity task = TaskEntity.builder()
-                .questionNumber(1)
-                .questionCount(questionCount)
-                .isAnswerCorrect(new LinkedList<>())
-                .userEntity(user)
-                .build();
-        taskRepository.save(task);
-        task.setLetters(generateLetters(questionCount, task));
-        taskRepository.save(task);
-        user.setMode(UserMode.TASK_MODE.name());
-        userRepository.save(user);
-        var letter = task.getLetters().get(task.getQuestionNumber() - 1).getLetterKey();
-        String taskText = "Letter - " + letter + "\nPronouns?";
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
-        message.setText(taskText);
+        message.setText(taskService.initialiseTask(userId));
         try {
             execute(message);
             log.info("Reply sent");
@@ -213,42 +168,19 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
             log.error(e.getMessage());
         }
     }
-
-    private List<TaskLettersEntity> generateLetters(int count, TaskEntity task) {
-        List<TaskLettersEntity> taskLettersEntities = new ArrayList<>();
-        long repositoryLength = katakanaRepository.count();
-        List<Long> idList = new ArrayList<>();
-        for (long j = 0; j < repositoryLength; j++) {
-            idList.add(j + 1);
-        }
-        Random random = new Random();
-        for (int i = 0; i < count; i++) {
-               String letterKey = katakanaRepository.findByHieroglyphId(idList
-                               .remove(random.nextInt(idList.size())))
-                            .orElseThrow(RuntimeException::new)
-                            .getHieroglyph();
-               String letterValue = katakanaRepository.findByHieroglyph(letterKey)
-                       .orElseThrow(RuntimeException::new)
-                       .getHieroglyphPronouns();
-               taskLettersEntities.add(TaskLettersEntity.builder()
-                       .letterKey(letterKey)
-                       .letterValue(letterValue)
-                       .taskEntity(task)
-                       .build());
-        }
-        return taskLettersEntities;
-    }
-
 
     private void returnPronouns(long chatId, String receivedMessage) {
-        SendMessage message = new SendMessage();
-        message.setChatId(chatId);
-        message.setText(handlerService.handleMessage(receivedMessage));
-        try {
-            execute(message);
-            log.info("Reply sent");
-        } catch (TelegramApiException e){
-            log.error(e.getMessage());
+        String response = handlerService.handleMessage(receivedMessage);
+        if (!response.isEmpty()){
+            SendMessage message = new SendMessage();
+            message.setChatId(chatId);
+            message.setText(response);
+            try {
+                execute(message);
+                log.info("Reply sent");
+            } catch (TelegramApiException e){
+                log.error(e.getMessage());
+            }
         }
     }
 
