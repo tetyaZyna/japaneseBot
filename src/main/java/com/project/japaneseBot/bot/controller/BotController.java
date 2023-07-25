@@ -10,15 +10,19 @@ import com.project.japaneseBot.bot.service.BotService;
 import com.project.japaneseBot.bot.service.HandlerService;
 import com.project.japaneseBot.bot.service.TaskService;
 import com.project.japaneseBot.config.BotConfig;
+import com.project.japaneseBot.task.entity.TaskSettingsEntity;
 import com.project.japaneseBot.task.repository.TaskRepository;
+import com.project.japaneseBot.task.repository.TaskSettingsRepository;
 import com.project.japaneseBot.user.entity.UserEntity;
 import com.project.japaneseBot.user.repository.UserRepository;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -38,8 +42,9 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     TaskRepository taskRepository;
     HandlerService handlerService;
     BotService botService;
-    final
     TaskService taskService;
+    @Autowired
+    TaskSettingsRepository settingsRepository;
 
     public BotController(BotConfig config, UserRepository userRepository, Buttons buttons, Keyboards keyboards,
                          ReadOnlyKatakanaRepository katakanaRepository, ReadOnlyHiraganaRepository hiraganaRepository,
@@ -112,11 +117,22 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
                     case "/profile" -> profile(chatId, userId);
                     case "/hiragana" -> switchHiragana(chatId);
                     case "/katakana" -> switchKatakana(chatId);
-                    case "/task" -> startTask(chatId, userId);
+                    case "/task" -> startTaskSettings(chatId, userId);
                     default -> defaultAnswer(chatId);
                 }
             } else {
                 returnPronouns(chatId, receivedMessage);
+            }
+        } else if (botService.getUserMode(userId).equals(UserMode.SETT_MODE.name())) {
+            if (receivedMessage.startsWith("/")) {
+                switch (receivedMessage) {
+                    case "/hiragana" -> switchHiragana(chatId);
+                    case "/katakana" -> switchKatakana(chatId);
+                    case "/close" -> closeTask(chatId, userId);
+                    default -> defaultAnswer(chatId);
+                }
+            } else {
+                handleSettings(chatId, userId, receivedMessage);
             }
         } else if (botService.getUserMode(userId).equals(UserMode.TASK_MODE.name())) {
             if (receivedMessage.startsWith("/")) {
@@ -129,6 +145,27 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
             } else {
                 checkAnswer(chatId, userId, receivedMessage);
             }
+        }
+    }
+
+    private void handleSettings(long chatId, long userId, String receivedMessage) {
+        TaskSettingsEntity settings = settingsRepository.findBySettingsName(receivedMessage);
+        startTask(chatId, userId, settings);
+    }
+
+    private void startTaskSettings(long chatId, long userId) {
+        UserEntity user = userRepository.findByUserId(userId);
+        user.setMode(UserMode.SETT_MODE.name());
+        userRepository.save(user);
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText("Chose task");
+        message.setReplyMarkup(buttons.inlineSettingsKeyboard());
+        try {
+            execute(message);
+            log.info("Reply sent");
+        } catch (TelegramApiException e){
+            log.error(e.getMessage());
         }
     }
 
@@ -157,10 +194,10 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         }
     }
 
-    private void startTask(long chatId, long userId) {
+    private void startTask(long chatId, long userId, TaskSettingsEntity settings) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
-        message.setText(taskService.initialiseTask(userId));
+        message.setText(taskService.initialiseTask(userId, settings));
         try {
             execute(message);
             log.info("Reply sent");

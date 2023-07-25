@@ -5,11 +5,13 @@ import com.project.japaneseBot.alphabet.repository.ReadOnlyKatakanaRepository;
 import com.project.japaneseBot.bot.model.UserMode;
 import com.project.japaneseBot.task.entity.TaskEntity;
 import com.project.japaneseBot.task.entity.TaskLettersEntity;
+import com.project.japaneseBot.task.entity.TaskSettingsEntity;
 import com.project.japaneseBot.task.repository.TaskRepository;
 import com.project.japaneseBot.user.entity.UserEntity;
 import com.project.japaneseBot.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -62,10 +64,9 @@ public class TaskService {
         userRepository.save(user);
     }
 
-    public String initialiseTask(long userId) {
+    public String initialiseTask(long userId, TaskSettingsEntity settings) {
         UserEntity user = userRepository.findByUserId(userId);
-        int questionCount = 10;
-        TaskEntity task = createAndSaveTask(user, questionCount);
+        TaskEntity task = createAndSaveTask(user, settings);
         user.setMode(UserMode.TASK_MODE.name());
         userRepository.save(user);
         var letter = task.getLetters().get(task.getQuestionNumber() - 1).getLetterKey();
@@ -73,34 +74,26 @@ public class TaskService {
     }
 
     @Transactional
-    public TaskEntity createAndSaveTask(UserEntity user, int questionCount) {
+    public TaskEntity createAndSaveTask(UserEntity user, TaskSettingsEntity settings) {
         TaskEntity task = TaskEntity.builder()
                 .questionNumber(1)
-                .questionCount(questionCount)
+                .questionCount(settings.getQuestionCount())
                 .isAnswerCorrect(new LinkedList<>())
                 .userEntity(user)
+                .taskSettingsEntity(settings)
                 .build();
-        task.setLetters(generateLetters(questionCount, task));
+        task.setLetters(generateLetters(settings, task));
         taskRepository.save(task);
         return task;
     }
 
-    private List<TaskLettersEntity> generateLetters(int count, TaskEntity task) {
+    private List<TaskLettersEntity> generateLetters(TaskSettingsEntity settings, TaskEntity task) {
         List<TaskLettersEntity> taskLettersEntities = new ArrayList<>();
-        long repositoryLength = katakanaRepository.count();
-        List<Long> idList = new ArrayList<>();
-        for (long j = 0; j < repositoryLength; j++) {
-            idList.add(j + 1);
-        }
-        Random random = new Random();
-        for (int i = 0; i < count; i++) {
-            String letterKey = katakanaRepository.findByHieroglyphId(idList
-                            .remove(random.nextInt(idList.size())))
-                    .orElseThrow(RuntimeException::new)
-                    .getHieroglyph();
-            String letterValue = katakanaRepository.findByHieroglyph(letterKey)
-                    .orElseThrow(RuntimeException::new)
-                    .getHieroglyphPronouns();
+        List<String> lettersList = generateLettersList(settings);
+        //int count = settings.getQuestionCount();
+        for (int i = 0; i < lettersList.size(); i++) {
+            String letterKey = lettersList.remove(0);
+            String letterValue = lettersList.remove(1);
             taskLettersEntities.add(TaskLettersEntity.builder()
                     .letterKey(letterKey)
                     .letterValue(letterValue)
@@ -108,5 +101,63 @@ public class TaskService {
                     .build());
         }
         return taskLettersEntities;
+    }
+
+    private List<String> generateLettersList(TaskSettingsEntity settings) {
+        List<String> lettersList = new LinkedList<>();
+        int count = settings.getQuestionCount();
+        Random random = new Random();
+        if (settings.getLetterGroup().equals("HIRAGANA")) {
+            long repoLength = hiraganaRepository.count();
+            if (settings.getUseLetters()) {
+                for (int i = 0; i < count; i++) {
+                    String letterKey = hiraganaRepository.findByHieroglyphId(random.nextLong(repoLength + 1))
+                            .orElseThrow(RuntimeException::new)
+                            .getHieroglyph();
+                    String letterValue = hiraganaRepository.findByHieroglyph(letterKey)
+                            .orElseThrow(RuntimeException::new)
+                            .getHieroglyphPronouns();
+                    lettersList.add(letterKey);
+                    lettersList.add(letterValue);
+                }
+            } else if (settings.getUsePronouns()) {
+                for (int i = 0; i < count; i++) {
+                    String letterValue = hiraganaRepository.findByHieroglyphId(random.nextLong(repoLength + 1))
+                            .orElseThrow(RuntimeException::new)
+                            .getHieroglyph();
+                    String letterKey = hiraganaRepository.findByHieroglyph(letterValue)
+                            .orElseThrow(RuntimeException::new)
+                            .getHieroglyphPronouns();
+                    lettersList.add(letterKey);
+                    lettersList.add(letterValue);
+                }
+            }
+        } else if (settings.getLetterGroup().equals("KATAKANA")) {
+            long repoLength = katakanaRepository.count();
+            if (settings.getUseLetters()) {
+                for (int i = 0; i < count; i++) {
+                    String letterKey = katakanaRepository.findByHieroglyphId(random.nextLong(repoLength + 1))
+                            .orElseThrow(RuntimeException::new)
+                            .getHieroglyph();
+                    String letterValue = katakanaRepository.findByHieroglyph(letterKey)
+                            .orElseThrow(RuntimeException::new)
+                            .getHieroglyphPronouns();
+                    lettersList.add(letterKey);
+                    lettersList.add(letterValue);
+                }
+            } else if (settings.getUsePronouns()) {
+                for (int i = 0; i < count; i++) {
+                    String letterValue = katakanaRepository.findByHieroglyphId(random.nextLong(repoLength + 1))
+                            .orElseThrow(RuntimeException::new)
+                            .getHieroglyph();
+                    String letterKey = katakanaRepository.findByHieroglyph(letterValue)
+                            .orElseThrow(RuntimeException::new)
+                            .getHieroglyphPronouns();
+                    lettersList.add(letterKey);
+                    lettersList.add(letterValue);
+                }
+            }
+        }
+        return lettersList;
     }
 }
