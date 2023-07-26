@@ -2,12 +2,12 @@ package com.project.japaneseBot.bot.service;
 
 import com.project.japaneseBot.alphabet.repository.ReadOnlyHiraganaRepository;
 import com.project.japaneseBot.alphabet.repository.ReadOnlyKatakanaRepository;
-import com.project.japaneseBot.bot.model.UserMode;
-import com.project.japaneseBot.task.entity.TaskEntity;
-import com.project.japaneseBot.task.entity.TaskLettersEntity;
-import com.project.japaneseBot.task.entity.TaskSettingsEntity;
+import com.project.japaneseBot.user.model.enums.UserMode;
+import com.project.japaneseBot.task.model.entity.TaskEntity;
+import com.project.japaneseBot.task.model.entity.TaskLettersEntity;
+import com.project.japaneseBot.task.model.entity.TaskSettingsEntity;
 import com.project.japaneseBot.task.repository.TaskRepository;
-import com.project.japaneseBot.user.entity.UserEntity;
+import com.project.japaneseBot.user.model.entity.UserEntity;
 import com.project.japaneseBot.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;

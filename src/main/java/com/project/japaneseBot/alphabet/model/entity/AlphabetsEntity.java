@@ -1,4 +1,4 @@
-package com.project.japaneseBot.alphabet.entity;
+package com.project.japaneseBot.alphabet.model.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -16,13 +16,17 @@ import static jakarta.persistence.GenerationType.IDENTITY;
 @NoArgsConstructor
 @Entity
 @Validated
-@Table(name = "hiragana")
-public class HiraganaEntity {
+@Table(name = "alphabets")
+public class AlphabetsEntity {
     @Id
     @GeneratedValue(strategy = IDENTITY)
-    private Long hieroglyphId;
+    private Long letterId;
 
-    private String hieroglyph;
+    private String letter;
 
-    private String hieroglyphPronouns;
+    private String letterPronouns;
+
+    private String alphabet;
+
+    private String letterGroup;
 }

@@ -1,4 +1,4 @@
-package com.project.japaneseBot.alphabet.entity;
+package com.project.japaneseBot.alphabet.model.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -9,6 +9,7 @@ import org.springframework.validation.annotation.Validated;
 
 import static jakarta.persistence.GenerationType.IDENTITY;
 
+@Deprecated
 @Builder
 @Getter
 @Setter
@@ -16,8 +17,8 @@ import static jakarta.persistence.GenerationType.IDENTITY;
 @NoArgsConstructor
 @Entity
 @Validated
-@Table(name = "katakana")
-public class KatakanaEntity {
+@Table(name = "hiragana")
+public class HiraganaEntity {
     @Id
     @GeneratedValue(strategy = IDENTITY)
     private Long hieroglyphId;
@@ -26,4 +27,3 @@ public class KatakanaEntity {
 
     private String hieroglyphPronouns;
 }
-

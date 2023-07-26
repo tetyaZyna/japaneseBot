@@ -1,4 +1,4 @@
-package com.project.japaneseBot.task.entity;
+package com.project.japaneseBot.task.model.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;

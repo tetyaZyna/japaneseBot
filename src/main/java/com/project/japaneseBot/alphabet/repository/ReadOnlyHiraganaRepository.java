@@ -1,6 +1,6 @@
 package com.project.japaneseBot.alphabet.repository;
 
-import com.project.japaneseBot.alphabet.entity.HiraganaEntity;
+import com.project.japaneseBot.alphabet.model.entity.HiraganaEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

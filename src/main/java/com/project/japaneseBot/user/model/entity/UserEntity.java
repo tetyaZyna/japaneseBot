@@ -1,6 +1,6 @@
-package com.project.japaneseBot.user.entity;
+package com.project.japaneseBot.user.model.entity;
 
-import com.project.japaneseBot.task.entity.TaskEntity;
+import com.project.japaneseBot.task.model.entity.TaskEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.validation.annotation.Validated;
