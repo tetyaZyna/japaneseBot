@@ -7,7 +7,10 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
+@Deprecated
 public interface ReadOnlyKatakanaRepository extends JpaRepository<KatakanaEntity, Long> {
+    Optional<KatakanaEntity> findByHieroglyphPronouns(String hieroglyphPronouns);
+    boolean existsByHieroglyphPronouns(String hieroglyphPronouns);
     boolean existsByHieroglyph(String hieroglyph);
     Optional<KatakanaEntity> findByHieroglyph(String hieroglyph);
     Optional<KatakanaEntity> findByHieroglyphId(long hieroglyphId);

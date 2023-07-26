@@ -7,7 +7,10 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
+@Deprecated
 public interface ReadOnlyHiraganaRepository extends JpaRepository<HiraganaEntity, Long> {
+    Optional<HiraganaEntity> findByHieroglyphPronouns(String hieroglyphPronouns);
+    boolean existsByHieroglyphPronouns(String hieroglyphPronouns);
     Optional<HiraganaEntity> findByHieroglyph(String hieroglyph);
     boolean existsByHieroglyph(String hieroglyph);
     Optional<HiraganaEntity> findByHieroglyphId(long hieroglyphId);
