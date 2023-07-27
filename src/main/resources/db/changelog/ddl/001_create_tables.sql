@@ -102,3 +102,9 @@ CREATE TABLE alphabets
     letter_group    VARCHAR(255),
     CONSTRAINT pk_alphabets PRIMARY KEY (letter_id)
 );
+
+--changeset sasha:8
+ALTER TABLE task_letters ADD COLUMN IF NOT EXISTS letter_alphabet VARCHAR(255) NULL DEFAULT 'DEFAULT';
+
+--changeset sasha:9
+ALTER TABLE task_settings ADD COLUMN IF NOT EXISTS alphabet VARCHAR(255) NOT NULL DEFAULT 'ALL';

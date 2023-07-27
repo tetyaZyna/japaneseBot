@@ -27,6 +27,9 @@ public class TaskSettingsEntity {
     private Integer questionCount;
 
     @NotBlank
+    private String alphabet;
+
+    @NotBlank
     private String letterGroup;
 
     @NotBlank

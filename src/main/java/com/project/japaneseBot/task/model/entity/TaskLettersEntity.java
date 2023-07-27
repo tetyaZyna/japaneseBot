@@ -24,4 +24,6 @@ public class TaskLettersEntity {
     private String letterKey;
 
     private String letterValue;
+
+    private String letterAlphabet;
 }

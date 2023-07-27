@@ -1,17 +1,19 @@
 package com.project.japaneseBot.bot.service;
 
-import com.project.japaneseBot.alphabet.repository.ReadOnlyHiraganaRepository;
-import com.project.japaneseBot.alphabet.repository.ReadOnlyKatakanaRepository;
-import com.project.japaneseBot.user.model.enums.UserMode;
+import com.project.japaneseBot.alphabet.model.entity.AlphabetsEntity;
+import com.project.japaneseBot.alphabet.model.enums.AlphabetsTypes;
+import com.project.japaneseBot.alphabet.repository.AlphabetsRepository;
+import com.project.japaneseBot.task.model.dto.LetterDTO;
 import com.project.japaneseBot.task.model.entity.TaskEntity;
 import com.project.japaneseBot.task.model.entity.TaskLettersEntity;
 import com.project.japaneseBot.task.model.entity.TaskSettingsEntity;
 import com.project.japaneseBot.task.repository.TaskRepository;
 import com.project.japaneseBot.user.model.entity.UserEntity;
+import com.project.japaneseBot.user.model.enums.UserMode;
 import com.project.japaneseBot.user.repository.UserRepository;
-import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -22,31 +24,17 @@ import java.util.Random;
 @AllArgsConstructor
 public class TaskService {
     UserRepository userRepository;
-    ReadOnlyKatakanaRepository katakanaRepository;
-    ReadOnlyHiraganaRepository hiraganaRepository;
     TaskRepository taskRepository;
+    AlphabetsRepository alphabetsRepository;
     public String checkAnswer(long userId, String receivedMessage) {
         TaskEntity task = taskRepository.findFirstByUserEntity_UserIdOrderByTaskIdDesc(userId)
                 .orElseThrow(RuntimeException::new);
         String returnText = "Error";
         if (task.getQuestionNumber() <= task.getQuestionCount()) {
-            String letterKey = task.getLetters().get(task.getQuestionNumber() - 1).getLetterKey();
-            String letterValue;
-            if (katakanaRepository.existsByHieroglyph(letterKey)) {
-                letterValue = katakanaRepository.findByHieroglyph(letterKey).orElseThrow(RuntimeException::new)
-                        .getHieroglyphPronouns();
-            } else if (katakanaRepository.existsByHieroglyphPronouns(letterKey)) {
-                letterValue = katakanaRepository.findByHieroglyphPronouns(letterKey).orElseThrow(RuntimeException::new)
-                        .getHieroglyph();
-            } else if (hiraganaRepository.existsByHieroglyph(letterKey)) {
-                letterValue = hiraganaRepository.findByHieroglyph(letterKey).orElseThrow(RuntimeException::new)
-                        .getHieroglyphPronouns();
-            } else if (hiraganaRepository.existsByHieroglyphPronouns(letterKey)) {
-                letterValue = hiraganaRepository.findByHieroglyphPronouns(letterKey).orElseThrow(RuntimeException::new)
-                        .getHieroglyph();
-            } else {
-                return "Error";
-            }
+            TaskLettersEntity taskLetters = task.getLetters().get(task.getQuestionNumber() - 1);
+            String letterKey = taskLetters.getLetterKey();
+            String letterAlphabet = taskLetters.getLetterAlphabet();
+            String letterValue = getLetterValue(letterKey, letterAlphabet);
             boolean isCorrect;
             if (receivedMessage.equals(letterValue)) {
                 returnText = "Correct";
@@ -55,20 +43,42 @@ public class TaskService {
                 returnText = "Wrong";
                 isCorrect = false;
             }
-            List<Boolean> answers = task.getIsAnswerCorrect();
-            answers.add(isCorrect);
-            int currentNumber = task.getQuestionNumber();
-            task.setQuestionNumber(currentNumber + 1);
-            taskRepository.save(task);
-            if (task.getQuestionNumber() > task.getQuestionCount()) {
-                returnText = returnText + "\n\nYour answers: " + task.getIsAnswerCorrect().toString();
-                closeTask(userId);
-            } else {
-                letterValue = task.getLetters().get(task.getQuestionNumber() - 1).getLetterKey();
-                returnText = returnText + "\n\nLetter - " + letterValue + "\nPronouns?";
-            }
+            updateTaskProgress(task, isCorrect);
+            returnText = processTaskResult(task, returnText, userId);
         }
         return returnText;
+    }
+
+    private String processTaskResult(TaskEntity task, String returnText, long userId) {
+        if (task.getQuestionNumber() > task.getQuestionCount()) {
+            returnText = returnText + "\n\nYour answers: " + task.getIsAnswerCorrect().toString();
+            closeTask(userId);
+        } else {
+            String letterValue = task.getLetters().get(task.getQuestionNumber() - 1).getLetterKey();
+            returnText = returnText + "\n\nLetter - " + letterValue + "\nPronouns?";
+        }
+        return returnText;
+    }
+
+    private void updateTaskProgress(TaskEntity task, boolean answerResult) {
+        List<Boolean> answers = task.getIsAnswerCorrect();
+        answers.add(answerResult);
+        int currentNumber = task.getQuestionNumber();
+        task.setQuestionNumber(currentNumber + 1);
+        taskRepository.save(task);
+    }
+
+    private String getLetterValue(String letterKey, String letterAlphabet) {
+        if (alphabetsRepository.existsByLetter(letterKey)) {
+            return alphabetsRepository.findByLetter(letterKey).orElseThrow(RuntimeException::new)
+                    .getLetterPronouns();
+        } else if (alphabetsRepository.existsByLetterPronouns(letterKey)) {
+            return alphabetsRepository.findByAlphabetAndLetterPronounsIgnoreCase(letterAlphabet, letterKey)
+                    .orElseThrow(RuntimeException::new)
+                    .getLetter();
+        } else {
+            throw new RuntimeException("Value " + letterKey + " does`t exist in DataBase" );
+        }
     }
 
     public void closeTask(long userId) {
@@ -77,6 +87,7 @@ public class TaskService {
         userRepository.save(user);
     }
 
+    @Transactional
     public String initialiseTask(long userId, TaskSettingsEntity settings) {
         UserEntity user = userRepository.findByUserId(userId);
         TaskEntity task = createAndSaveTask(user, settings);
@@ -95,82 +106,72 @@ public class TaskService {
                 .userEntity(user)
                 .taskSettingsEntity(settings)
                 .build();
-        task.setLetters(generateLetters(settings, task));
+        task.setLetters(createTaskLettersEntities(settings, task));
         taskRepository.save(task);
         return task;
     }
 
-    private List<TaskLettersEntity> generateLetters(TaskSettingsEntity settings, TaskEntity task) {
+    private List<TaskLettersEntity> createTaskLettersEntities(TaskSettingsEntity settings, TaskEntity task) {
         List<TaskLettersEntity> taskLettersEntities = new ArrayList<>();
-        List<String> lettersList = generateLettersList(settings);
-        int lettersListSize = lettersList.size();
-        for (int i = 0; i < lettersListSize / 2; i++) {
-            String letterKey = lettersList.remove(0);
-            String letterValue = lettersList.remove(0);
+        List<LetterDTO> lettersList = generateLettersList(settings);
+        for (LetterDTO letterDTO : lettersList) {
             taskLettersEntities.add(TaskLettersEntity.builder()
-                    .letterKey(letterKey)
-                    .letterValue(letterValue)
+                    .letterKey(letterDTO.letterKey())
+                    .letterValue(letterDTO.letterValue())
+                    .letterAlphabet(letterDTO.letterAlphabet())
                     .taskEntity(task)
                     .build());
         }
         return taskLettersEntities;
     }
 
-    private List<String> generateLettersList(TaskSettingsEntity settings) {
-        List<String> lettersList = new LinkedList<>();
+    private List<LetterDTO> generateLettersList(TaskSettingsEntity settings) {
+        List<LetterDTO> lettersList = new LinkedList<>();
         int count = settings.getQuestionCount();
-        Random random = new Random();
-        if (settings.getLetterGroup().equals("HIRAGANA")) {
-            long repoLength = hiraganaRepository.count();
-            if (settings.getUseLetters()) {
-                for (int i = 0; i < count; i++) {
-                    String letterKey = hiraganaRepository.findByHieroglyphId(random.nextLong(repoLength) + 1)
-                            .orElseThrow(RuntimeException::new)
-                            .getHieroglyph();
-                    String letterValue = hiraganaRepository.findByHieroglyph(letterKey)
-                            .orElseThrow(RuntimeException::new)
-                            .getHieroglyphPronouns();
-                    lettersList.add(letterKey);
-                    lettersList.add(letterValue);
-                }
-            } else if (settings.getUsePronouns()) {
-                for (int i = 0; i < count; i++) {
-                    String letterValue = hiraganaRepository.findByHieroglyphId(random.nextLong(repoLength) + 1)
-                            .orElseThrow(RuntimeException::new)
-                            .getHieroglyph();
-                    String letterKey = hiraganaRepository.findByHieroglyph(letterValue)
-                            .orElseThrow(RuntimeException::new)
-                            .getHieroglyphPronouns();
-                    lettersList.add(letterKey);
-                    lettersList.add(letterValue);
-                }
-            }
-        } else if (settings.getLetterGroup().equals("KATAKANA")) {
-            long repoLength = katakanaRepository.count();
-            if (settings.getUseLetters()) {
-                for (int i = 0; i < count; i++) {
-                    String letterKey = katakanaRepository.findByHieroglyphId(random.nextLong(repoLength) + 1)
-                            .orElseThrow(RuntimeException::new)
-                            .getHieroglyph();
-                    String letterValue = katakanaRepository.findByHieroglyph(letterKey)
-                            .orElseThrow(RuntimeException::new)
-                            .getHieroglyphPronouns();
-                    lettersList.add(letterKey);
-                    lettersList.add(letterValue);
-                }
-            } else if (settings.getUsePronouns()) {
-                for (int i = 0; i < count; i++) {
-                    String letterValue = katakanaRepository.findByHieroglyphId(random.nextLong(repoLength) + 1)
-                            .orElseThrow(RuntimeException::new)
-                            .getHieroglyph();
-                    String letterKey = katakanaRepository.findByHieroglyph(letterValue)
-                            .orElseThrow(RuntimeException::new)
-                            .getHieroglyphPronouns();
-                    lettersList.add(letterKey);
-                    lettersList.add(letterValue);
-                }
-            }
+        List<AlphabetsEntity> alphabets = getAlphabet(settings);
+        if (alphabets.isEmpty()) {
+            throw new RuntimeException("Alphabet still empty after getAlphabet() method");
+        }
+        for (int i = 0; i < count; i++) {
+            LetterDTO letterDTO = getLetterDTO(settings, alphabets);
+            lettersList.add(letterDTO);
+        }
+        if (lettersList.isEmpty()) {
+            throw new RuntimeException("lettersList still empty after getLetterDTO() method");
         }
         return lettersList;
+    }
+
+    private List<AlphabetsEntity> getAlphabet(TaskSettingsEntity settings) {
+        if (settings.getAlphabet().equals(AlphabetsTypes.ALL.name())) {
+            return alphabetsRepository.findAll();
+        }
+        return alphabetsRepository.findByAlphabet(settings.getAlphabet());
+    }
+
+    private LetterDTO getLetterDTO(TaskSettingsEntity settings, List<AlphabetsEntity> alphabets) {
+        Random random = new Random();
+        int alphabetsLength = alphabets.size();
+        AlphabetsEntity alphabetsEntity = alphabets.get(random.nextInt(alphabetsLength));
+        String letterKey;
+        String letterValue;
+        boolean useLetter;
+        if (settings.getUseLetters() && settings.getUsePronouns()) {
+            useLetter = random.nextBoolean();
+        } else {
+            useLetter = settings.getUseLetters();
+        }
+        if (useLetter) {
+            letterKey = alphabetsEntity.getLetter();
+            letterValue = alphabetsEntity.getLetterPronouns();
+        } else {
+            letterKey = alphabetsEntity.getLetterPronouns();
+            letterValue = alphabetsEntity.getLetter();
+        }
+        return LetterDTO.builder()
+                .letterKey(letterKey)
+                .letterValue(letterValue)
+                .letterAlphabet(alphabetsEntity.getAlphabet())
+                .build();
     }
 }
