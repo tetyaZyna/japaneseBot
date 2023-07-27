@@ -9,6 +9,8 @@ import java.util.Optional;
 
 @Repository
 public interface AlphabetsRepository extends JpaRepository<AlphabetsEntity, Long> {
+    boolean existsByLetter(String letter);
+    Optional<AlphabetsEntity> findByLetter(String letter);
     List<AlphabetsEntity> findByAlphabet(String alphabet);
     Optional<AlphabetsEntity> findByLetterId(Long letterId);
     long countByAlphabet(String alphabet);

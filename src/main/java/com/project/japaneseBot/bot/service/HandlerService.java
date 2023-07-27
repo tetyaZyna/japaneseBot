@@ -1,19 +1,17 @@
 package com.project.japaneseBot.bot.service;
 
-import com.project.japaneseBot.alphabet.repository.ReadOnlyHiraganaRepository;
-import com.project.japaneseBot.alphabet.repository.ReadOnlyKatakanaRepository;
+import com.project.japaneseBot.alphabet.repository.AlphabetsRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
 @Service
 @AllArgsConstructor
 public class HandlerService {
-    ReadOnlyKatakanaRepository katakanaRepository;
-    ReadOnlyHiraganaRepository hiraganaRepository;
+    AlphabetsRepository alphabetsRepository;
 
     public String handleMessage(String message) {
         List<String> letters = new LinkedList<>();
@@ -41,24 +39,16 @@ public class HandlerService {
         }
     }
 
+    protected List<String> findLetterPronunciation(String letter) {
+        String letterPronouns = alphabetsRepository.findByLetter(letter).orElseThrow(RuntimeException::new)
+                .getLetterPronouns();
+        return List.of(letter, letterPronouns);
+    }
+
      protected List<String> handleLetter(String letter) {
-        if (katakanaRepository.existsByHieroglyph(letter)) {
-            return handleKatakanaValue(letter);
-        } else if (hiraganaRepository.existsByHieroglyph(letter)) {
-            return handleHiraganaValue(letter);
+        if (alphabetsRepository.existsByLetter(letter)) {
+            return findLetterPronunciation(letter);
         }
-        return new ArrayList<>();
-    }
-
-    private List<String> handleKatakanaValue(String katakanaValue) {
-        String hieroglyphPronouns = katakanaRepository.findByHieroglyph(katakanaValue)
-                .orElseThrow(RuntimeException::new).getHieroglyphPronouns();
-        return List.of(katakanaValue, hieroglyphPronouns);
-    }
-
-    private List<String> handleHiraganaValue(String hiraganaValue) {
-        String hieroglyphPronouns = hiraganaRepository.findByHieroglyph(hiraganaValue)
-                .orElseThrow(RuntimeException::new).getHieroglyphPronouns();
-        return List.of(hiraganaValue, hieroglyphPronouns);
+        return Collections.emptyList();
     }
 }

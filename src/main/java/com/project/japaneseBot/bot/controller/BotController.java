@@ -1,11 +1,8 @@
 package com.project.japaneseBot.bot.controller;
 
-import com.project.japaneseBot.alphabet.repository.ReadOnlyHiraganaRepository;
-import com.project.japaneseBot.alphabet.repository.ReadOnlyKatakanaRepository;
 import com.project.japaneseBot.bot.BotCommands;
 import com.project.japaneseBot.bot.buttons.Buttons;
 import com.project.japaneseBot.bot.buttons.Keyboards;
-import com.project.japaneseBot.user.model.enums.UserMode;
 import com.project.japaneseBot.bot.service.BotService;
 import com.project.japaneseBot.bot.service.HandlerService;
 import com.project.japaneseBot.bot.service.TaskService;
@@ -14,10 +11,10 @@ import com.project.japaneseBot.task.model.entity.TaskSettingsEntity;
 import com.project.japaneseBot.task.repository.TaskRepository;
 import com.project.japaneseBot.task.repository.TaskSettingsRepository;
 import com.project.japaneseBot.user.model.entity.UserEntity;
+import com.project.japaneseBot.user.model.enums.UserMode;
 import com.project.japaneseBot.user.repository.UserRepository;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
@@ -36,35 +33,31 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     Buttons buttons;
     Keyboards keyboards;
     UserRepository userRepository;
-    ReadOnlyKatakanaRepository katakanaRepository;
-    ReadOnlyHiraganaRepository hiraganaRepository;
     TaskRepository taskRepository;
     HandlerService handlerService;
     BotService botService;
     TaskService taskService;
-    @Autowired
     TaskSettingsRepository settingsRepository;
 
     public BotController(BotConfig config, UserRepository userRepository, Buttons buttons, Keyboards keyboards,
-                         ReadOnlyKatakanaRepository katakanaRepository, ReadOnlyHiraganaRepository hiraganaRepository,
                          TaskRepository taskRepository, HandlerService handlerService, BotService botService,
-                         TaskService taskService) {
+                         TaskService taskService, TaskSettingsRepository settingsRepository) {
         super(config.token());
         this.config = config;
         this.buttons = buttons;
         this.keyboards = keyboards;
         this.userRepository = userRepository;
-        this.katakanaRepository = katakanaRepository;
-        this.hiraganaRepository = hiraganaRepository;
         this.taskRepository = taskRepository;
         this.handlerService = handlerService;
         this.botService = botService;
         this.taskService = taskService;
+        this.settingsRepository = settingsRepository;
         try {
             this.execute(new SetMyCommands(LIST_OF_COMMANDS, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e){
             log.error(e.getMessage());
         }
+
     }
 
     @Override
