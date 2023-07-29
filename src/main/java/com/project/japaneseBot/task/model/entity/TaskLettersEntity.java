@@ -23,6 +23,8 @@ public class TaskLettersEntity {
 
     private String letterKey;
 
+    private String keyType;
+
     private String letterValue;
 
     private String letterAlphabet;

@@ -7,6 +7,7 @@ import com.project.japaneseBot.task.model.dto.LetterDTO;
 import com.project.japaneseBot.task.model.entity.TaskEntity;
 import com.project.japaneseBot.task.model.entity.TaskLettersEntity;
 import com.project.japaneseBot.task.model.entity.TaskSettingsEntity;
+import com.project.japaneseBot.task.model.enums.LetterKeyType;
 import com.project.japaneseBot.task.repository.TaskRepository;
 import com.project.japaneseBot.user.model.entity.UserEntity;
 import com.project.japaneseBot.user.model.enums.UserMode;
@@ -26,6 +27,8 @@ public class TaskService {
     UserRepository userRepository;
     TaskRepository taskRepository;
     AlphabetsRepository alphabetsRepository;
+    UserService userService;
+
     public String checkAnswer(long userId, String receivedMessage) {
         TaskEntity task = taskRepository.findFirstByUserEntity_UserIdOrderByTaskIdDesc(userId)
                 .orElseThrow(RuntimeException::new);
@@ -52,10 +55,15 @@ public class TaskService {
     private String processTaskResult(TaskEntity task, String returnText, long userId) {
         if (task.getQuestionNumber() > task.getQuestionCount()) {
             returnText = returnText + "\n\nYour answers: " + task.getIsAnswerCorrect().toString();
-            closeTask(userId);
+            userService.startTextMode(userId);
         } else {
-            String letterValue = task.getLetters().get(task.getQuestionNumber() - 1).getLetterKey();
-            returnText = returnText + "\n\nLetter - " + letterValue + "\nPronouns?";
+            TaskLettersEntity letter = task.getLetters().get(task.getQuestionNumber() - 1);
+            String letterValue = letter.getLetterKey();
+            returnText = returnText + "\n\nWhich is equivalent to - " + letterValue + " ";
+            if (letter.getKeyType().equals(LetterKeyType.PRONOUNS.name())) {
+                returnText = returnText + "(" + letter.getLetterAlphabet().toLowerCase() + ")";
+            }
+            returnText = returnText + "\nYour answer?";
         }
         return returnText;
     }
@@ -81,20 +89,12 @@ public class TaskService {
         }
     }
 
-    public void closeTask(long userId) {
-        UserEntity user = userRepository.findByUserId(userId);
-        user.setMode(UserMode.TEXT_MODE.name());
-        userRepository.save(user);
-    }
-
     @Transactional
     public String initialiseTask(long userId, TaskSettingsEntity settings) {
         UserEntity user = userRepository.findByUserId(userId);
         TaskEntity task = createAndSaveTask(user, settings);
-        user.setMode(UserMode.TASK_MODE.name());
-        userRepository.save(user);
-        var letter = task.getLetters().get(task.getQuestionNumber() - 1).getLetterKey();
-        return "Letter - " + letter + "\nPronouns?";
+        userService.startTaskMode(userId);
+        return processTaskResult(task, "", userId);
     }
 
     @Transactional
@@ -117,6 +117,7 @@ public class TaskService {
         for (LetterDTO letterDTO : lettersList) {
             taskLettersEntities.add(TaskLettersEntity.builder()
                     .letterKey(letterDTO.letterKey())
+                    .keyType(letterDTO.keyType())
                     .letterValue(letterDTO.letterValue())
                     .letterAlphabet(letterDTO.letterAlphabet())
                     .taskEntity(task)
@@ -155,6 +156,7 @@ public class TaskService {
         AlphabetsEntity alphabetsEntity = alphabets.get(random.nextInt(alphabetsLength));
         String letterKey;
         String letterValue;
+        String keyType;
         boolean useLetter;
         if (settings.getUseLetters() && settings.getUsePronouns()) {
             useLetter = random.nextBoolean();
@@ -163,13 +165,16 @@ public class TaskService {
         }
         if (useLetter) {
             letterKey = alphabetsEntity.getLetter();
+            keyType = LetterKeyType.LETTER.name();
             letterValue = alphabetsEntity.getLetterPronouns();
         } else {
             letterKey = alphabetsEntity.getLetterPronouns();
+            keyType = LetterKeyType.PRONOUNS.name();
             letterValue = alphabetsEntity.getLetter();
         }
         return LetterDTO.builder()
                 .letterKey(letterKey)
+                .keyType(keyType)
                 .letterValue(letterValue)
                 .letterAlphabet(alphabetsEntity.getAlphabet())
                 .build();

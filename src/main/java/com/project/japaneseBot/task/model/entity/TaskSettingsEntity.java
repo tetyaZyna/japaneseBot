@@ -22,8 +22,7 @@ public class TaskSettingsEntity {
 
     @NotBlank
     private String settingsName;
-
-    @NotBlank
+    
     private Integer questionCount;
 
     @NotBlank
@@ -32,10 +31,8 @@ public class TaskSettingsEntity {
     @NotBlank
     private String letterGroup;
 
-    @NotBlank
     private Boolean useLetters;
 
-    @NotBlank
     private Boolean usePronouns;
 
     @OneToMany(mappedBy = "taskSettingsEntity", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)

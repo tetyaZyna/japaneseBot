@@ -3,13 +3,13 @@ package com.project.japaneseBot.bot.controller;
 import com.project.japaneseBot.bot.BotCommands;
 import com.project.japaneseBot.bot.buttons.Buttons;
 import com.project.japaneseBot.bot.buttons.Keyboards;
-import com.project.japaneseBot.bot.service.BotService;
+import com.project.japaneseBot.bot.service.UserService;
 import com.project.japaneseBot.bot.service.HandlerService;
+import com.project.japaneseBot.bot.service.SettingsService;
 import com.project.japaneseBot.bot.service.TaskService;
 import com.project.japaneseBot.config.BotConfig;
 import com.project.japaneseBot.task.model.entity.TaskSettingsEntity;
 import com.project.japaneseBot.task.repository.TaskRepository;
-import com.project.japaneseBot.task.repository.TaskSettingsRepository;
 import com.project.japaneseBot.user.model.entity.UserEntity;
 import com.project.japaneseBot.user.model.enums.UserMode;
 import com.project.japaneseBot.user.repository.UserRepository;
@@ -24,6 +24,7 @@ import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScope
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.LocalDate;
+import java.util.List;
 
 
 @Component
@@ -32,16 +33,16 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     BotConfig config;
     Buttons buttons;
     Keyboards keyboards;
-    UserRepository userRepository;
+    UserRepository userRepository; //TODO refactor: don't use repositories in controller
     TaskRepository taskRepository;
     HandlerService handlerService;
-    BotService botService;
+    UserService userService;
     TaskService taskService;
-    TaskSettingsRepository settingsRepository;
+    SettingsService settingsService;
 
     public BotController(BotConfig config, UserRepository userRepository, Buttons buttons, Keyboards keyboards,
-                         TaskRepository taskRepository, HandlerService handlerService, BotService botService,
-                         TaskService taskService, TaskSettingsRepository settingsRepository) {
+                         TaskRepository taskRepository, HandlerService handlerService, UserService userService,
+                         TaskService taskService, SettingsService settingsService) {
         super(config.token());
         this.config = config;
         this.buttons = buttons;
@@ -49,9 +50,9 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         this.userRepository = userRepository;
         this.taskRepository = taskRepository;
         this.handlerService = handlerService;
-        this.botService = botService;
+        this.userService = userService;
         this.taskService = taskService;
-        this.settingsRepository = settingsRepository;
+        this.settingsService = settingsService;
         try {
             this.execute(new SetMyCommands(LIST_OF_COMMANDS, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e){
@@ -86,7 +87,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     }
 
     private void botAnswerUtils(String receivedMessage, long chatId, String userName, long userId) {
-        if (botService.getUserMode(userId).equals(UserMode.GUEST_MODE.name())) {
+        if (userService.getUserMode(userId).equals(UserMode.GUEST_MODE.name())) {
             if (receivedMessage.startsWith("/")) {
                 switch (receivedMessage) {
                     case "/start" -> startBot(chatId, userName);
@@ -100,7 +101,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
             } else {
                 returnPronouns(chatId, receivedMessage);
             }
-        } else if (botService.getUserMode(userId).equals(UserMode.TEXT_MODE.name())) {
+        } else if (userService.getUserMode(userId).equals(UserMode.TEXT_MODE.name())) {
             if (receivedMessage.startsWith("/")) {
                 switch (receivedMessage) {
                     case "/start" -> startBot(chatId, userName);
@@ -115,40 +116,81 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
             } else {
                 returnPronouns(chatId, receivedMessage);
             }
-        } else if (botService.getUserMode(userId).equals(UserMode.SETT_MODE.name())) {
+        } else if (userService.getUserMode(userId).equals(UserMode.SETT_MODE.name())) {
             if (receivedMessage.startsWith("/")) {
                 switch (receivedMessage) {
                     case "/hiragana" -> switchHiragana(chatId);
                     case "/katakana" -> switchKatakana(chatId);
-                    case "/close" -> closeTask(chatId, userId);
+                    case "/close" -> returnToTaskMode(chatId, userId);
+                    case "/create" -> startCreatingSettings(chatId, userId);
                     default -> defaultAnswer(chatId);
                 }
             } else {
                 handleSettings(chatId, userId, receivedMessage);
             }
-        } else if (botService.getUserMode(userId).equals(UserMode.TASK_MODE.name())) {
+        } else if (userService.getUserMode(userId).equals(UserMode.TASK_MODE.name())) {
             if (receivedMessage.startsWith("/")) {
                 switch (receivedMessage) {
                     case "/hiragana" -> switchHiragana(chatId);
                     case "/katakana" -> switchKatakana(chatId);
-                    case "/close" -> closeTask(chatId, userId);
+                    case "/close" -> returnToTaskMode(chatId, userId);
                     default -> defaultAnswer(chatId);
                 }
             } else {
                 checkAnswer(chatId, userId, receivedMessage);
             }
+        } else if (userService.getUserMode(userId).equals(UserMode.EDIT_SETT_MODE.name())) {
+            if (receivedMessage.startsWith("/")) {
+                if (receivedMessage.startsWith("/setSettings")) {
+                     createAndSaveSettings(chatId, userId, receivedMessage);
+                } else {
+                    switch (receivedMessage) {
+                        case "/hiragana" -> switchHiragana(chatId);
+                        case "/katakana" -> switchKatakana(chatId);
+                        case "/close" -> returnToTaskMode(chatId, userId);
+                        default -> defaultAnswer(chatId);
+                    }
+                }
+            }
+        }
+    }
+
+    private void createAndSaveSettings(long chatId, long userId, String receivedMessage) {
+        List<String> receivedSettings = List.of(receivedMessage.split(" "));
+        settingsService.save(TaskSettingsEntity.builder()
+                .settingsName(receivedSettings.get(1))
+                .questionCount(Integer.parseInt(receivedSettings.get(2)))
+                .alphabet(receivedSettings.get(3))
+                .letterGroup("ALL")
+                .usePronouns(Boolean.parseBoolean(receivedSettings.get(4)))
+                .useLetters(Boolean.parseBoolean(receivedSettings.get(5)))
+                .build());
+        startTaskSettings(chatId, userId);
+    }
+
+    private void startCreatingSettings(long chatId, long userId) {
+        userService.startEditSettingsMode(userId);
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText("""
+                        Set settings name
+                        Use /setSettings [Name] [Default count] [Alphabet] [Use pronouns] [Use letter]
+                """);
+        try {
+            execute(message);
+            log.info("Reply sent");
+        } catch (TelegramApiException e){
+            log.error(e.getMessage());
         }
     }
 
     private void handleSettings(long chatId, long userId, String receivedMessage) {
-        TaskSettingsEntity settings = settingsRepository.findBySettingsName(receivedMessage);
+        TaskSettingsEntity settings = settingsService.findSettings(receivedMessage);
         startTask(chatId, userId, settings);
     }
 
     private void startTaskSettings(long chatId, long userId) {
-        UserEntity user = userRepository.findByUserId(userId);
-        user.setMode(UserMode.SETT_MODE.name());
-        userRepository.save(user);
+        userService.startSettingsMode(userId);
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
         message.setText("Chose task");
@@ -173,11 +215,11 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         }
     }
 
-    private void closeTask(long chatId, long userId) {
-        taskService.closeTask(userId);
+    private void returnToTaskMode(long chatId, long userId) {
+        userService.startTextMode(userId);
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
-        message.setText("Task closed");
+        message.setText("Returned to Text mode");
         try {
             execute(message);
             log.info("Reply sent");

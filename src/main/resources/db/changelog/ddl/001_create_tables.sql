@@ -108,3 +108,6 @@ ALTER TABLE task_letters ADD COLUMN IF NOT EXISTS letter_alphabet VARCHAR(255) N
 
 --changeset sasha:9
 ALTER TABLE task_settings ADD COLUMN IF NOT EXISTS alphabet VARCHAR(255) NOT NULL DEFAULT 'ALL';
+
+--changeset sasha:10
+ALTER TABLE task_letters ADD COLUMN IF NOT EXISTS key_type VARCHAR(255) NULL DEFAULT 'PRONOUNS';
