@@ -10,7 +10,6 @@ import com.project.japaneseBot.task.model.entity.TaskSettingsEntity;
 import com.project.japaneseBot.task.model.enums.LetterKeyType;
 import com.project.japaneseBot.task.repository.TaskRepository;
 import com.project.japaneseBot.user.model.entity.UserEntity;
-import com.project.japaneseBot.user.model.enums.UserMode;
 import com.project.japaneseBot.user.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -3,10 +3,10 @@ package com.project.japaneseBot.bot.controller;
 import com.project.japaneseBot.bot.BotCommands;
 import com.project.japaneseBot.bot.buttons.Buttons;
 import com.project.japaneseBot.bot.buttons.Keyboards;
-import com.project.japaneseBot.bot.service.UserService;
 import com.project.japaneseBot.bot.service.HandlerService;
 import com.project.japaneseBot.bot.service.SettingsService;
 import com.project.japaneseBot.bot.service.TaskService;
+import com.project.japaneseBot.bot.service.UserService;
 import com.project.japaneseBot.config.BotConfig;
 import com.project.japaneseBot.task.model.entity.TaskSettingsEntity;
 import com.project.japaneseBot.task.repository.TaskRepository;
@@ -24,7 +24,6 @@ import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScope
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.LocalDate;
-import java.util.List;
 
 
 @Component
@@ -156,15 +155,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     }
 
     private void createAndSaveSettings(long chatId, long userId, String receivedMessage) {
-        List<String> receivedSettings = List.of(receivedMessage.split(" "));
-        settingsService.save(TaskSettingsEntity.builder()
-                .settingsName(receivedSettings.get(1))
-                .questionCount(Integer.parseInt(receivedSettings.get(2)))
-                .alphabet(receivedSettings.get(3))
-                .letterGroup("ALL")
-                .usePronouns(Boolean.parseBoolean(receivedSettings.get(4)))
-                .useLetters(Boolean.parseBoolean(receivedSettings.get(5)))
-                .build());
+        settingsService.createAndSaveSettings(receivedMessage);
         startTaskSettings(chatId, userId);
     }
 
