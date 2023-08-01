@@ -9,10 +9,7 @@ import com.project.japaneseBot.bot.service.TaskService;
 import com.project.japaneseBot.bot.service.UserService;
 import com.project.japaneseBot.config.BotConfig;
 import com.project.japaneseBot.task.model.entity.TaskSettingsEntity;
-import com.project.japaneseBot.task.repository.TaskRepository;
-import com.project.japaneseBot.user.model.entity.UserEntity;
 import com.project.japaneseBot.user.model.enums.UserMode;
-import com.project.japaneseBot.user.repository.UserRepository;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -23,8 +20,6 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.time.LocalDate;
-
 
 @Component
 @Slf4j
@@ -32,22 +27,17 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     BotConfig config;
     Buttons buttons;
     Keyboards keyboards;
-    UserRepository userRepository; //TODO refactor: don't use repositories in controller
-    TaskRepository taskRepository;
     HandlerService handlerService;
     UserService userService;
     TaskService taskService;
     SettingsService settingsService;
 
-    public BotController(BotConfig config, UserRepository userRepository, Buttons buttons, Keyboards keyboards,
-                         TaskRepository taskRepository, HandlerService handlerService, UserService userService,
-                         TaskService taskService, SettingsService settingsService) {
+    public BotController(BotConfig config, Buttons buttons, Keyboards keyboards, HandlerService handlerService,
+                         UserService userService, TaskService taskService, SettingsService settingsService) {
         super(config.token());
         this.config = config;
         this.buttons = buttons;
         this.keyboards = keyboards;
-        this.userRepository = userRepository;
-        this.taskRepository = taskRepository;
         this.handlerService = handlerService;
         this.userService = userService;
         this.taskService = taskService;
@@ -304,11 +294,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     }
 
     private void registerUser (long chatId, long userId) {
-        userRepository.save(UserEntity.builder()
-                .userId(userId)
-                .registrationDate(LocalDate.now())
-                .mode("TEXT_MODE")
-                .build());
+        userService.createUser(userId);
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
         message.setText("Created Account");
@@ -322,10 +308,9 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     }
 
     private void profile (long chatId, long userId) {
-        var user = userRepository.findById(userId).orElseThrow(RuntimeException::new);
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
-        message.setText("Data of creation: " + user.getRegistrationDate().toString());
+        message.setText(userService.getUserProfile(userId));
 
         try {
             execute(message);

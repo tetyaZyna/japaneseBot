@@ -8,5 +8,6 @@ import java.util.Optional;
 
 @Repository
 public interface TaskRepository extends JpaRepository<TaskEntity, Long> {
+    long countByUserEntity_UserId(Long userId);
     Optional<TaskEntity> findFirstByUserEntity_UserIdOrderByTaskIdDesc(long userId);
 }
