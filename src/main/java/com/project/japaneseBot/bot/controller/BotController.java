@@ -86,71 +86,89 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     }
 
     private void botAnswerUtils(String receivedMessage, long chatId, String userName, long userId) {
-        if (userService.getUserMode(userId).equals(UserMode.GUEST_MODE.name())) {
-            if (receivedMessage.startsWith("/")) {
-                switch (receivedMessage) {
-                    case "/start" -> startBot(chatId, userName);
-                    case "/help" -> sendHelpText(chatId);
-                    case "/register" -> registerUser(chatId, userId);
-                    case "/profile" -> profile(chatId, userId);
-                    case "/hiragana" -> switchHiragana(chatId);
-                    case "/katakana" -> switchKatakana(chatId);
-                    default -> defaultAnswer(chatId);
-                }
+        UserMode userMode = UserMode.valueOf(userService.getUserMode(userId));
+        switch (userMode) {
+            case GUEST_MODE -> handleGuestModeCommand(receivedMessage, chatId, userName, userId);
+            case TEXT_MODE -> handleTextModeCommand(receivedMessage, chatId, userId, userName);
+            case SETT_MODE -> handleSettModeCommand(receivedMessage, chatId, userId);
+            case TASK_MODE -> handleTaskModeCommand(receivedMessage, chatId, userId);
+            case EDIT_SETT_MODE -> handleEditSettModeCommand(receivedMessage, chatId, userId);
+            default -> defaultAnswer(chatId);
+        }
+    }
+
+    private void handleEditSettModeCommand(String receivedMessage, long chatId, long userId) {
+        if (receivedMessage.startsWith("/")) {
+            if (receivedMessage.startsWith("/setSettings")) {
+                createAndSaveSettings(chatId, userId, receivedMessage);
             } else {
-                returnPronouns(chatId, receivedMessage);
-            }
-        } else if (userService.getUserMode(userId).equals(UserMode.TEXT_MODE.name())) {
-            if (receivedMessage.startsWith("/")) {
-                switch (receivedMessage) {
-                    case "/start" -> startBot(chatId, userName);
-                    case "/help" -> sendHelpText(chatId);
-                    case "/register" -> registerUser(chatId, userId);
-                    case "/profile" -> profile(chatId, userId);
-                    case "/hiragana" -> switchHiragana(chatId);
-                    case "/katakana" -> switchKatakana(chatId);
-                    case "/task" -> startTaskSettings(chatId, userId);
-                    default -> defaultAnswer(chatId);
-                }
-            } else {
-                returnPronouns(chatId, receivedMessage);
-            }
-        } else if (userService.getUserMode(userId).equals(UserMode.SETT_MODE.name())) {
-            if (receivedMessage.startsWith("/")) {
-                switch (receivedMessage) {
-                    case "/hiragana" -> switchHiragana(chatId);
-                    case "/katakana" -> switchKatakana(chatId);
-                    case "/close" -> returnToTaskMode(chatId, userId);
-                    case "/create" -> startCreatingSettings(chatId, userId);
-                    default -> defaultAnswer(chatId);
-                }
-            } else {
-                handleSettings(chatId, userId, receivedMessage);
-            }
-        } else if (userService.getUserMode(userId).equals(UserMode.TASK_MODE.name())) {
-            if (receivedMessage.startsWith("/")) {
                 switch (receivedMessage) {
                     case "/hiragana" -> switchHiragana(chatId);
                     case "/katakana" -> switchKatakana(chatId);
                     case "/close" -> returnToTaskMode(chatId, userId);
                     default -> defaultAnswer(chatId);
                 }
-            } else {
-                checkAnswer(chatId, userId, receivedMessage);
             }
-        } else if (userService.getUserMode(userId).equals(UserMode.EDIT_SETT_MODE.name())) {
-            if (receivedMessage.startsWith("/")) {
-                if (receivedMessage.startsWith("/setSettings")) {
-                     createAndSaveSettings(chatId, userId, receivedMessage);
-                } else {
-                    switch (receivedMessage) {
-                        case "/hiragana" -> switchHiragana(chatId);
-                        case "/katakana" -> switchKatakana(chatId);
-                        case "/close" -> returnToTaskMode(chatId, userId);
-                        default -> defaultAnswer(chatId);
-                    }
-                }
+        }
+    }
+
+    private void handleTaskModeCommand(String receivedMessage, long chatId, long userId) {
+        if (receivedMessage.startsWith("/")) {
+            switch (receivedMessage) {
+                case "/hiragana" -> switchHiragana(chatId);
+                case "/katakana" -> switchKatakana(chatId);
+                case "/close" -> returnToTaskMode(chatId, userId);
+                default -> defaultAnswer(chatId);
             }
+        } else {
+            checkAnswer(chatId, userId, receivedMessage);
+        }
+    }
+
+    private void handleSettModeCommand(String receivedMessage, long chatId, long userId) {
+        if (receivedMessage.startsWith("/")) {
+            switch (receivedMessage) {
+                case "/hiragana" -> switchHiragana(chatId);
+                case "/katakana" -> switchKatakana(chatId);
+                case "/close" -> returnToTaskMode(chatId, userId);
+                case "/create" -> startCreatingSettings(chatId, userId);
+                default -> defaultAnswer(chatId);
+            }
+        } else {
+            handleSettings(chatId, userId, receivedMessage);
+        }
+    }
+
+    private void handleTextModeCommand(String receivedMessage, long chatId, long userId, String userName) {
+        if (receivedMessage.startsWith("/")) {
+            switch (receivedMessage) {
+                case "/start" -> startBot(chatId, userName);
+                case "/help" -> sendHelpText(chatId);
+                case "/register" -> registerUser(chatId, userId);
+                case "/profile" -> profile(chatId, userId);
+                case "/hiragana" -> switchHiragana(chatId);
+                case "/katakana" -> switchKatakana(chatId);
+                case "/task" -> startTaskSettings(chatId, userId);
+                default -> defaultAnswer(chatId);
+            }
+        } else {
+            returnPronouns(chatId, receivedMessage);
+        }
+    }
+
+    private void handleGuestModeCommand(String receivedMessage, long chatId, String userName, long userId) {
+        if (receivedMessage.startsWith("/")) {
+            switch (receivedMessage) {
+                case "/start" -> startBot(chatId, userName);
+                case "/help" -> sendHelpText(chatId);
+                case "/register" -> registerUser(chatId, userId);
+                case "/profile" -> profile(chatId, userId);
+                case "/hiragana" -> switchHiragana(chatId);
+                case "/katakana" -> switchKatakana(chatId);
+                default -> defaultAnswer(chatId);
+            }
+        } else {
+            returnPronouns(chatId, receivedMessage);
         }
     }
 
