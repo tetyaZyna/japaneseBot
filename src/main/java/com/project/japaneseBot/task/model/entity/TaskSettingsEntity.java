@@ -35,7 +35,7 @@ public class TaskSettingsEntity {
 
     private Boolean usePronouns;
 
-    @OneToMany(mappedBy = "taskSettingsEntity", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "taskSettingsEntity", fetch = FetchType.EAGER)
     private List<TaskEntity> taskEntity;
 
 }

@@ -1,5 +1,6 @@
 package com.project.japaneseBot.bot.service;
 
+import com.project.japaneseBot.alphabet.model.enums.AlphabetsTypes;
 import com.project.japaneseBot.alphabet.repository.AlphabetsRepository;
 import com.project.japaneseBot.task.model.entity.TaskSettingsEntity;
 import com.project.japaneseBot.task.repository.TaskRepository;
@@ -25,31 +26,57 @@ public class SettingsService {
         return settingsRepository.findBySettingsName(settingsName);
     }
 
-    public void createAndSaveSettings(String receivedMessage) {
-        List<String> receivedSettings = List.of(receivedMessage.split(" "));
-        String settingsName;
+    private boolean isValidQuestionCount(int questionCount) {
+        return questionCount >= 5 && questionCount <= 100;
+    }
+
+    private boolean isValidAlphabet(String alphabet) {
+        List<AlphabetsTypes> alphabetsTypesList = AlphabetsTypes.getAlphabetsTypesList();
+        for (AlphabetsTypes types : alphabetsTypesList) {
+            if (types.name().equalsIgnoreCase(alphabet)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @SuppressWarnings("unused")
+    private boolean isValidSettings(List<String> receivedSettings) {
+        if (receivedSettings.size() < 6) {
+            return false;
+        }
         int questionCount;
         String alphabet;
-        boolean usePronouns;
-        boolean useLetters;
         try {
-            settingsName = receivedSettings.get(1);
             questionCount = Integer.parseInt(receivedSettings.get(2));
-            alphabet = receivedSettings.get(3);
-            usePronouns = Boolean.parseBoolean(receivedSettings.get(4));
-            useLetters = Boolean.parseBoolean(receivedSettings.get(5));
-
-            settingsRepository.save(TaskSettingsEntity.builder()
-                    .settingsName(settingsName)
-                    .questionCount(questionCount)
-                    .alphabet(alphabet)
-                    .letterGroup("ALL")
-                    .usePronouns(usePronouns)
-                    .useLetters(useLetters)
-                    .build());
-        } catch (RuntimeException e) {
+            alphabet = receivedSettings.get(3).toUpperCase();
+            boolean usePronouns = Boolean.parseBoolean(receivedSettings.get(4));
+            boolean useLetters = Boolean.parseBoolean(receivedSettings.get(5));
+        } catch (NumberFormatException e) {
             log.error(e.getMessage());
+            return false;
         }
+        return isValidQuestionCount(questionCount) && isValidAlphabet(alphabet);
+    }
 
+    public String createAndSaveSettings(String receivedMessage) {
+        List<String> receivedSettings = List.of(receivedMessage.split(" "));
+        if (!isValidSettings(receivedSettings)) {
+            return null;
+        }
+        String settingsName = receivedSettings.get(1);
+        int questionCount = Integer.parseInt(receivedSettings.get(2));
+        String alphabet = receivedSettings.get(3).toUpperCase();
+        boolean usePronouns = Boolean.parseBoolean(receivedSettings.get(4));
+        boolean useLetters = Boolean.parseBoolean(receivedSettings.get(5));
+        settingsRepository.save(TaskSettingsEntity.builder()
+                .settingsName(settingsName)
+                .questionCount(questionCount)
+                .alphabet(alphabet)
+                .letterGroup("ALL")
+                .usePronouns(usePronouns)
+                .useLetters(useLetters)
+                .build());
+        return "Settings created";
     }
 }

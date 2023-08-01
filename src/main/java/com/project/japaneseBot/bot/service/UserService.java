@@ -19,7 +19,7 @@ public class UserService {
         if (userRepository.existsByUserId(userId)) {
             return userRepository.findByUserId(userId).getMode();
         } else {
-            return "GUEST_MODE";
+            return UserMode.GUEST_MODE.name();
         }
     }
 
@@ -46,16 +46,26 @@ public class UserService {
     }
 
     public String getUserProfile(long userId) {
-        UserEntity user = userRepository.findById(userId).orElseThrow(RuntimeException::new);
-        return "Data of creation: " + user.getRegistrationDate().toString() +
-                "\nTask completed: " + taskRepository.countByUserEntity_UserId(userId);
+        if (userRepository.existsByUserId(userId)) {
+            UserEntity user = userRepository.findById(userId).orElseThrow(RuntimeException::new);
+            return "Data of creation: " + user.getRegistrationDate().toString() +
+                    "\nTasks completed: " + taskRepository.countByUserEntity_UserId(userId);
+        } else {
+            return "You don't have an account. Create one using the command /register";
+        }
     }
 
-    public void createUser(long userId) {
-        userRepository.save(UserEntity.builder()
-                .userId(userId)
-                .registrationDate(LocalDate.now())
-                .mode("TEXT_MODE")
-                .build());
+    public String createUser(long userId, String userName) {
+        if (userRepository.existsByUserId(userId)) {
+            return "You are already registered, enjoy using the bot, " + userName;
+        } else {
+            userRepository.save(UserEntity.builder()
+                    .userId(userId)
+                    .registrationDate(LocalDate.now())
+                    .mode("TEXT_MODE")
+                    .build());
+            return "Account created";
+        }
+
     }
 }

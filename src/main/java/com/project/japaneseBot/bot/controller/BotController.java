@@ -95,7 +95,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
                 switch (receivedMessage) {
                     case "/hiragana" -> switchHiragana(chatId);
                     case "/katakana" -> switchKatakana(chatId);
-                    case "/close" -> returnToTaskMode(chatId, userId);
+                    case "/close" -> returnToTextMode(chatId, userId);
                     default -> defaultAnswer(chatId);
                 }
             }
@@ -107,7 +107,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
             switch (receivedMessage) {
                 case "/hiragana" -> switchHiragana(chatId);
                 case "/katakana" -> switchKatakana(chatId);
-                case "/close" -> returnToTaskMode(chatId, userId);
+                case "/close" -> returnToTextMode(chatId, userId);
                 default -> defaultAnswer(chatId);
             }
         } else {
@@ -120,7 +120,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
             switch (receivedMessage) {
                 case "/hiragana" -> switchHiragana(chatId);
                 case "/katakana" -> switchKatakana(chatId);
-                case "/close" -> returnToTaskMode(chatId, userId);
+                case "/close" -> returnToTextMode(chatId, userId);
                 case "/create" -> startCreatingSettings(chatId, userId);
                 default -> defaultAnswer(chatId);
             }
@@ -134,7 +134,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
             switch (receivedMessage) {
                 case "/start" -> startBot(chatId, userName);
                 case "/help" -> sendHelpText(chatId);
-                case "/register" -> registerUser(chatId, userId);
+                case "/register" -> registerUser(chatId, userId, userName);
                 case "/profile" -> profile(chatId, userId);
                 case "/hiragana" -> switchHiragana(chatId);
                 case "/katakana" -> switchKatakana(chatId);
@@ -151,7 +151,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
             switch (receivedMessage) {
                 case "/start" -> startBot(chatId, userName);
                 case "/help" -> sendHelpText(chatId);
-                case "/register" -> registerUser(chatId, userId);
+                case "/register" -> registerUser(chatId, userId, userName);
                 case "/profile" -> profile(chatId, userId);
                 case "/hiragana" -> switchHiragana(chatId);
                 case "/katakana" -> switchKatakana(chatId);
@@ -163,8 +163,25 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     }
 
     private void createAndSaveSettings(long chatId, long userId, String receivedMessage) {
-        settingsService.createAndSaveSettings(receivedMessage);
-        startTaskSettings(chatId, userId);
+        String answer = settingsService.createAndSaveSettings(receivedMessage);
+        if (answer == null) {
+            sendFeedbackAboutCreatingSettings(chatId,"Error while processing settings. Check if the input is correct.");
+        } else {
+            sendFeedbackAboutCreatingSettings(chatId, answer);
+            startTaskSettings(chatId, userId);
+        }
+    }
+
+    private void sendFeedbackAboutCreatingSettings(long chatId, String feedback) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText(feedback);
+        try {
+            execute(message);
+            log.info("Reply sent");
+        } catch (TelegramApiException e){
+            log.error(e.getMessage());
+        }
     }
 
     private void startCreatingSettings(long chatId, long userId) {
@@ -212,7 +229,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         }
     }
 
-    private void returnToTaskMode(long chatId, long userId) {
+    private void returnToTextMode(long chatId, long userId) {
         userService.startTextMode(userId);
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
@@ -255,7 +272,8 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     private void defaultAnswer(long chatId) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
-        message.setText("Unknown command");
+        message.setText("Unknown command. " +
+                "Perhaps you should register (/register) or close (/close) your current activity to use this command.");
         try {
             execute(message);
             log.info("Reply sent");
@@ -291,11 +309,10 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         }
     }
 
-    private void registerUser (long chatId, long userId) {
-        userService.createUser(userId);
+    private void registerUser (long chatId, long userId, String userName) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
-        message.setText("Created Account");
+        message.setText(userService.createUser(userId, userName));
 
         try {
             execute(message);
