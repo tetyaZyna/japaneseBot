@@ -1,5 +1,6 @@
 package com.project.japaneseBot.bot.buttons;
 
+import com.project.japaneseBot.task.model.entity.TaskSettingsEntity;
 import com.project.japaneseBot.task.repository.TaskSettingsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -14,16 +15,14 @@ public class Buttons {
     @Autowired
     TaskSettingsRepository settingsRepository;
 
-    private final InlineKeyboardButton START_BUTTON = new InlineKeyboardButton("Start");
     private final InlineKeyboardButton HELP_BUTTON = new InlineKeyboardButton("Help");
     private final InlineKeyboardButton KATAKANA_BUTTON = new InlineKeyboardButton("Katakana");
     private final InlineKeyboardButton HIRAGANA_BUTTON = new InlineKeyboardButton("Hiragana");
 
     public InlineKeyboardMarkup inlineMarkup() {
-        START_BUTTON.setCallbackData("/start");
         HELP_BUTTON.setCallbackData("/help");
 
-        List<InlineKeyboardButton> rowInline = List.of(START_BUTTON, HELP_BUTTON);
+        List<InlineKeyboardButton> rowInline = List.of(HELP_BUTTON);
         List<List<InlineKeyboardButton>> rowsInLine = List.of(rowInline);
 
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
@@ -50,20 +49,19 @@ public class Buttons {
         List<InlineKeyboardButton> rowInline = new ArrayList<>();
         List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
         String settingsName;
-        long repositoryLength = settingsRepository.count();
-        for (long i = 1; i <= repositoryLength; i++) {
-            if (i % 2 == 1 && i > 1) {
+        List<TaskSettingsEntity> settingsList = settingsRepository.findAll();
+        int rowCount = 0;
+        for (TaskSettingsEntity settings : settingsList) {
+            if (rowCount == 2) {
                 rowsInLine.add(rowInline);
                 rowInline = new ArrayList<>();
+                rowCount = 0;
             }
-            if (settingsRepository.existsById(i)) {
-                settingsName = settingsRepository.findById(i)
-                        .orElseThrow(RuntimeException::new)
-                        .getSettingsName();
-                InlineKeyboardButton settButton = new InlineKeyboardButton(settingsName);
-                settButton.setCallbackData(settingsName);
-                rowInline.add(settButton);
-            }
+            settingsName = settings.getSettingsName();
+            InlineKeyboardButton settButton = new InlineKeyboardButton(settingsName);
+            settButton.setCallbackData(settingsName);
+            rowInline.add(settButton);
+            rowCount++;
         }
         rowsInLine.add(rowInline);
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();

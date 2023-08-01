@@ -269,7 +269,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     private void startBot(long chatId, String userName) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
-        message.setText("Hi, " + userName + "! I'm a Telegram bot.'");
+        message.setText("Hi, " + userName + "! I'm a Telegram bot for learning Japanese.'");
         message.setReplyMarkup(buttons.inlineMarkup());
 
         try {
