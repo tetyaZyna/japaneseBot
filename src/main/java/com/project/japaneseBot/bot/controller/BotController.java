@@ -171,10 +171,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         userService.startEditSettingsMode(userId);
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
-        message.setText("""
-                        Set settings name
-                        Use /setSettings [Name] [Default count] [Alphabet] [Use pronouns] [Use letter]
-                """);
+        message.setText(SETTING_CREATION_INSTRUCTION);
         try {
             execute(message);
             log.info("Reply sent");
@@ -192,7 +189,8 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         userService.startSettingsMode(userId);
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
-        message.setText("Chose task");
+        message.setText("Chose task settings" +
+                "\nOr you can create your own. Use /create");
         message.setReplyMarkup(buttons.inlineSettingsKeyboard());
         try {
             execute(message);
