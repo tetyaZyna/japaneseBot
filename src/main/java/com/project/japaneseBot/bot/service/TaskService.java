@@ -7,7 +7,7 @@ import com.project.japaneseBot.task.model.dto.LetterDTO;
 import com.project.japaneseBot.task.model.entity.TaskEntity;
 import com.project.japaneseBot.task.model.entity.TaskLettersEntity;
 import com.project.japaneseBot.task.model.entity.TaskSettingsEntity;
-import com.project.japaneseBot.task.model.enums.LetterKeyType;
+import com.project.japaneseBot.alphabet.model.enums.AlphabetRepresentation;
 import com.project.japaneseBot.task.repository.TaskRepository;
 import com.project.japaneseBot.user.model.entity.UserEntity;
 import com.project.japaneseBot.user.repository.UserRepository;
@@ -59,7 +59,7 @@ public class TaskService {
             TaskLettersEntity letter = task.getLetters().get(task.getQuestionNumber() - 1);
             String letterValue = letter.getLetterKey();
             returnText = returnText + "\n\nWhich is equivalent to - " + letterValue + " ";
-            if (letter.getKeyType().equals(LetterKeyType.PRONOUNS.name())) {
+            if (letter.getKeyType().equals(AlphabetRepresentation.PRONOUNS.name())) {
                 returnText = returnText + "(" + letter.getLetterAlphabet().toLowerCase() + ")";
             }
             returnText = returnText + "\nYour answer?";
@@ -164,11 +164,11 @@ public class TaskService {
         }
         if (useLetter) {
             letterKey = alphabetsEntity.getLetter();
-            keyType = LetterKeyType.LETTER.name();
+            keyType = AlphabetRepresentation.LETTER.name();
             letterValue = alphabetsEntity.getLetterPronouns();
         } else {
             letterKey = alphabetsEntity.getLetterPronouns();
-            keyType = LetterKeyType.PRONOUNS.name();
+            keyType = AlphabetRepresentation.PRONOUNS.name();
             letterValue = alphabetsEntity.getLetter();
         }
         return LetterDTO.builder()

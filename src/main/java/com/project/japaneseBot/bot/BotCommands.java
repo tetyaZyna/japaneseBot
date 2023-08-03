@@ -12,6 +12,7 @@ public interface BotCommands {
             new BotCommand("/profile", "View your profile"),
             new BotCommand("/katakana", "Open katakana keyboard"),
             new BotCommand("/hiragana", "Open hiragana keyboard"),
+            new BotCommand("/pronouns", "Open pronouns keyboard"),
             new BotCommand("/task", "Start new task (for registrants only)"),
             new BotCommand("/close", "Close the current activity and return to text mode")
     );
@@ -24,6 +25,7 @@ public interface BotCommands {
             /profile - View your profile
             /katakana - Open katakana keyboard
             /hiragana - Open hiragana keyboard
+            /pronouns - Open pronouns keyboard
             /task - Start new task (for registrants only)
             /close - Close the current activity and return to text mode
             """;

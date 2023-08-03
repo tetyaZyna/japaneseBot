@@ -77,38 +77,52 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
 
     private void botAnswerUtils(String receivedMessage, long chatId, String userName, long userId) {
         UserMode userMode = UserMode.valueOf(userService.getUserMode(userId));
-        switch (userMode) {
-            case GUEST_MODE -> handleGuestModeCommand(receivedMessage, chatId, userName, userId);
-            case TEXT_MODE -> handleTextModeCommand(receivedMessage, chatId, userId, userName);
-            case SETT_MODE -> handleSettModeCommand(receivedMessage, chatId, userId);
-            case TASK_MODE -> handleTaskModeCommand(receivedMessage, chatId, userId);
-            case EDIT_SETT_MODE -> handleEditSettModeCommand(receivedMessage, chatId, userId);
-            default -> defaultAnswer(chatId);
+        if (!handleKeyboardCommand(receivedMessage, chatId)) {
+            switch (userMode) {
+                case GUEST_MODE -> handleGuestModeCommand(receivedMessage, chatId, userName, userId);
+                case TEXT_MODE -> handleTextModeCommand(receivedMessage, chatId, userId, userName);
+                case SETT_MODE -> handleSettModeCommand(receivedMessage, chatId, userId);
+                case TASK_MODE -> handleTaskModeCommand(receivedMessage, chatId, userId);
+                case EDIT_SETT_MODE -> handleEditSettModeCommand(receivedMessage, chatId, userId);
+                default -> defaultAnswer(chatId);
+            }
         }
+    }
+
+    private boolean handleKeyboardCommand(String receivedMessage, long chatId) {
+        switch (receivedMessage) {
+            case "/hiragana" -> {
+                return switchHiragana(chatId);
+            }
+            case "/katakana" -> {
+                return switchKatakana(chatId);
+            }
+            case "/pronouns" -> {
+                return switchPronouns(chatId);
+            }
+        }
+        return false;
     }
 
     private void handleEditSettModeCommand(String receivedMessage, long chatId, long userId) {
         if (receivedMessage.startsWith("/")) {
+            handleKeyboardCommand(receivedMessage, chatId);
             if (receivedMessage.startsWith("/setSettings")) {
                 createAndSaveSettings(chatId, userId, receivedMessage);
+            } else if (receivedMessage.equals("/close")) {
+                returnToTextMode(chatId, userId);
             } else {
-                switch (receivedMessage) {
-                    case "/hiragana" -> switchHiragana(chatId);
-                    case "/katakana" -> switchKatakana(chatId);
-                    case "/close" -> returnToTextMode(chatId, userId);
-                    default -> defaultAnswer(chatId);
-                }
+                defaultAnswer(chatId);
             }
         }
     }
 
     private void handleTaskModeCommand(String receivedMessage, long chatId, long userId) {
         if (receivedMessage.startsWith("/")) {
-            switch (receivedMessage) {
-                case "/hiragana" -> switchHiragana(chatId);
-                case "/katakana" -> switchKatakana(chatId);
-                case "/close" -> returnToTextMode(chatId, userId);
-                default -> defaultAnswer(chatId);
+            if (receivedMessage.equals("/close")) {
+                returnToTextMode(chatId, userId);
+            } else {
+                defaultAnswer(chatId);
             }
         } else {
             checkAnswer(chatId, userId, receivedMessage);
@@ -118,8 +132,6 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     private void handleSettModeCommand(String receivedMessage, long chatId, long userId) {
         if (receivedMessage.startsWith("/")) {
             switch (receivedMessage) {
-                case "/hiragana" -> switchHiragana(chatId);
-                case "/katakana" -> switchKatakana(chatId);
                 case "/close" -> returnToTextMode(chatId, userId);
                 case "/create" -> startCreatingSettings(chatId, userId);
                 default -> defaultAnswer(chatId);
@@ -136,8 +148,6 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
                 case "/help" -> sendHelpText(chatId);
                 case "/register" -> registerUser(chatId, userId, userName);
                 case "/profile" -> profile(chatId, userId);
-                case "/hiragana" -> switchHiragana(chatId);
-                case "/katakana" -> switchKatakana(chatId);
                 case "/task" -> startTaskSettings(chatId, userId);
                 default -> defaultAnswer(chatId);
             }
@@ -153,8 +163,6 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
                 case "/help" -> sendHelpText(chatId);
                 case "/register" -> registerUser(chatId, userId, userName);
                 case "/profile" -> profile(chatId, userId);
-                case "/hiragana" -> switchHiragana(chatId);
-                case "/katakana" -> switchKatakana(chatId);
                 default -> defaultAnswer(chatId);
             }
         } else {
@@ -335,7 +343,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         }
     }
 
-    private void switchKatakana(long chatId) {
+    private boolean switchKatakana(long chatId) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
         message.setText("Keyboard switched to Katakana");
@@ -347,9 +355,10 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         } catch (TelegramApiException e){
             log.error(e.getMessage());
         }
+        return true;
     }
 
-    private void switchHiragana(long chatId) {
+    private boolean switchHiragana(long chatId) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
         message.setText("Keyboard switched to Hiragana");
@@ -361,6 +370,22 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
         } catch (TelegramApiException e){
             log.error(e.getMessage());
         }
+        return true;
+    }
+
+    private boolean switchPronouns(long chatId) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText("Keyboard switched to Pronouns");
+        message.setReplyMarkup(keyboards.getPronounsReplyKeyboardMarkup());
+
+        try {
+            execute(message);
+            log.info("Reply sent");
+        } catch (TelegramApiException e){
+            log.error(e.getMessage());
+        }
+        return true;
     }
 
     @Override
