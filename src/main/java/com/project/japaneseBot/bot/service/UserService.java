@@ -1,5 +1,6 @@
 package com.project.japaneseBot.bot.service;
 
+import com.project.japaneseBot.task.model.entity.TaskEntity;
 import com.project.japaneseBot.task.repository.TaskRepository;
 import com.project.japaneseBot.user.model.entity.UserEntity;
 import com.project.japaneseBot.user.model.enums.UserMode;
@@ -8,6 +9,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @AllArgsConstructor
@@ -49,10 +51,32 @@ public class UserService {
         if (userRepository.existsByUserId(userId)) {
             UserEntity user = userRepository.findById(userId).orElseThrow(RuntimeException::new);
             return "Data of creation: " + user.getRegistrationDate().toString() +
-                    "\nTasks completed: " + taskRepository.countByUserEntity_UserId(userId);
+                    "\nTasks completed: " + taskRepository.countByUserEntity_UserId(userId) +
+                    "\nPercent of correct answers: " + countCorrectAnswersPercent(user);
         } else {
             return "You don't have an account. Create one using the command /register";
         }
+    }
+
+    private String countCorrectAnswersPercent(UserEntity user) {
+        List<TaskEntity> taskList = user.getTasks();
+        if (taskList.isEmpty()) {
+            return "You have no completed tasks, use /task to start a task";
+        }
+        int correctAnswers = 0;
+        int wrongAnswers = 0;
+        for (TaskEntity task : taskList) {
+            List<Boolean> answerList = task.getIsAnswerCorrect();
+            for (Boolean answer : answerList) {
+                if (answer) {
+                    correctAnswers++;
+                } else {
+                    wrongAnswers++;
+                }
+            }
+        }
+        float correctAnswersPercent = (float) correctAnswers / (correctAnswers + wrongAnswers) * 100;
+        return String.format("%.1f", correctAnswersPercent) + "%";
     }
 
     public String createUser(long userId, String userName) {
