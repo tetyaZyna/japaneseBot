@@ -86,7 +86,7 @@ public class UserService {
             userRepository.save(UserEntity.builder()
                     .userId(userId)
                     .registrationDate(LocalDate.now())
-                    .mode("TEXT_MODE")
+                    .mode(UserMode.TEXT_MODE.name())
                     .build());
             return "Account created";
         }
