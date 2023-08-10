@@ -394,4 +394,3 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     }
 }
 
-
