@@ -1,6 +1,7 @@
 package com.project.japaneseBot.bot.service;
 
 import com.project.japaneseBot.task.model.entity.TaskEntity;
+import com.project.japaneseBot.task.model.entity.TaskLettersEntity;
 import com.project.japaneseBot.task.repository.TaskRepository;
 import com.project.japaneseBot.user.model.entity.UserEntity;
 import com.project.japaneseBot.user.model.enums.UserMode;
@@ -52,10 +53,31 @@ public class UserService {
             UserEntity user = userRepository.findById(userId).orElseThrow(RuntimeException::new);
             return "Data of creation: " + user.getRegistrationDate().toString() +
                     "\nTasks completed: " + taskRepository.countByUserEntity_UserId(userId) +
-                    "\nPercent of correct answers: " + countCorrectAnswersPercent(user);
+                    "\nPercent of correct answers: " + countCorrectAnswersPercent(user) +
+                    "\nLast mistake: " + getLastMistake(user);
         } else {
             return "You don't have an account. Create one using the command /register";
         }
+    }
+
+    private String getLastMistake(UserEntity userEntity) {
+        List<TaskEntity> tasksList = userEntity.getTasks();
+        while (true) {
+            if (!tasksList.isEmpty()) {
+                TaskEntity task = tasksList.remove(tasksList.size() - 1);
+                List<Boolean> taskAnswersList = task.getIsAnswerCorrect();
+                for (int j = taskAnswersList.size() - 1; j > 0; j-- ) {
+                    if (!taskAnswersList.get(j)) {
+                        TaskLettersEntity failedLetter = task.getLetters().get(j);
+                        return failedLetter.getLetterKey() + " - " + failedLetter.getLetterValue();
+                    }
+                }
+            } else {
+                break;
+            }
+
+        }
+        return "You have no mistakes";
     }
 
     private String countCorrectAnswersPercent(UserEntity user) {
