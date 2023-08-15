@@ -53,7 +53,7 @@ public class TaskService {
 
     private String processTaskResult(TaskEntity task, String returnText, long userId) {
         if (task.getQuestionNumber() > task.getQuestionCount()) {
-            returnText = returnText + "\n\nYour answers: " + task.getIsAnswerCorrect().toString();
+            returnText = returnText + "\n\nYour answers: " + visualiseAnswers(task);
             userService.startTextMode(userId);
         } else {
             TaskLettersEntity letter = task.getLetters().get(task.getQuestionNumber() - 1);
@@ -65,6 +65,19 @@ public class TaskService {
             returnText = returnText + "\nYour answer?";
         }
         return returnText;
+    }
+
+    private String  visualiseAnswers(TaskEntity task) {
+        List<Boolean> correctnessList = task.getIsAnswerCorrect();
+        StringBuilder stringBuilder = new StringBuilder();
+        for (boolean answer : correctnessList) {
+            if (answer) {
+                stringBuilder.append("\uD83D\uDFE2");
+            } else {
+                stringBuilder.append("\uD83D\uDD34");
+            }
+        }
+        return stringBuilder.toString();
     }
 
     private void updateTaskProgress(TaskEntity task, boolean answerResult) {
