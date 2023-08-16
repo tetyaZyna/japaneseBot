@@ -206,7 +206,7 @@ public class BotController extends TelegramLongPollingBot implements BotCommands
     }
 
     private void handleSettings(long chatId, long userId, String receivedMessage) {
-        TaskSettingsEntity settings = settingsService.findSettings(receivedMessage);
+        TaskSettingsEntity settings = settingsService.getSettingsByName(receivedMessage);
         startTask(chatId, userId, settings);
     }
 
