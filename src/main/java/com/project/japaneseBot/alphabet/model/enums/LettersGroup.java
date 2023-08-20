@@ -3,7 +3,9 @@ package com.project.japaneseBot.alphabet.model.enums;
 import java.util.Arrays;
 import java.util.List;
 
+@SuppressWarnings("unused")
 public enum LettersGroup {
+    ALL("All letters"),
     VOWEL("a - o and ya, yu, yo"),
     K_CONSONANT("ka - ko"),
     S_CONSONANT("sa - so"),

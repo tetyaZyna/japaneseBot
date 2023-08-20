@@ -1,13 +1,14 @@
 package com.project.japaneseBot.bot.service;
 
 import com.project.japaneseBot.alphabet.model.entity.AlphabetsEntity;
+import com.project.japaneseBot.alphabet.model.enums.AlphabetRepresentation;
 import com.project.japaneseBot.alphabet.model.enums.AlphabetsTypes;
+import com.project.japaneseBot.alphabet.model.enums.LettersGroup;
 import com.project.japaneseBot.alphabet.repository.AlphabetsRepository;
 import com.project.japaneseBot.task.model.dto.LetterDTO;
 import com.project.japaneseBot.task.model.entity.TaskEntity;
 import com.project.japaneseBot.task.model.entity.TaskLettersEntity;
 import com.project.japaneseBot.task.model.entity.TaskSettingsEntity;
-import com.project.japaneseBot.alphabet.model.enums.AlphabetRepresentation;
 import com.project.japaneseBot.task.repository.TaskRepository;
 import com.project.japaneseBot.user.model.entity.UserEntity;
 import com.project.japaneseBot.user.repository.UserRepository;
@@ -156,10 +157,27 @@ public class TaskService {
     }
 
     private List<AlphabetsEntity> getAlphabet(TaskSettingsEntity settings) {
-        if (settings.getAlphabet().equals(AlphabetsTypes.ALL.name())) {
-            return alphabetsRepository.findAll();
+        List<String> letterGroupsList = List.of(settings.getLetterGroup().split(" "));
+        if (letterGroupsList.isEmpty()) {
+            throw new RuntimeException("settings.getLetterGroup() has no data");
         }
-        return alphabetsRepository.findByAlphabet(settings.getAlphabet());
+        List<AlphabetsEntity> fullAlphabet = alphabetsRepository.findAll();
+        List<AlphabetsEntity> filteredAlphabet = new ArrayList<>();
+        if (!settings.getAlphabet().equals(AlphabetsTypes.ALL.name())) {
+            String alphabetName = settings.getAlphabet();
+            fullAlphabet = fullAlphabet.stream()
+                    .filter(letterEntity -> letterEntity.getAlphabet().equals(alphabetName))
+                    .toList();
+        }
+        if (letterGroupsList.contains(LettersGroup.ALL.name())) {
+            return fullAlphabet;
+        }
+        for (String letterGroup : letterGroupsList) {
+            filteredAlphabet.addAll(fullAlphabet.stream()
+                    .filter(letterEntity -> letterEntity.getLetterGroup().equals(letterGroup))
+                    .toList());
+        }
+        return filteredAlphabet;
     }
 
     private LetterDTO getLetterDTO(TaskSettingsEntity settings, List<AlphabetsEntity> alphabets) {
